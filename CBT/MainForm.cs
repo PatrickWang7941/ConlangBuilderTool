@@ -25,8 +25,33 @@ public partial class MainForm : Form
         MinimumSize = new Size(1000, 700);
 
         BuildLayout();
+        BuildNavigation();
+        
     }
 
+    private void BuildNavigation()
+    {
+        Button overviewButton = CreateNavigationButton("Overview");
+        Button phonologyButton = CreateNavigationButton("Phonology");
+        Button grammarButton = CreateNavigationButton("Grammar");
+        Button lexiconButton = CreateNavigationButton("Lexicon");
+
+        navigationPanel.Controls.Add(overviewButton);
+        navigationPanel.Controls.Add(phonologyButton);
+        navigationPanel.Controls.Add(grammarButton);
+        navigationPanel.Controls.Add(lexiconButton);
+    }
+    private Button CreateNavigationButton(string text)
+    {
+        Button button = new();
+
+        button.Text = text;
+        button.Size = new Size(180, 45);
+        button.Margin = new Padding(0, 0, 0, 10);
+        button.TextAlign = ContentAlignment.MiddleLeft;
+
+        return button;
+    }
 
     private void BuildLayout()
     {
