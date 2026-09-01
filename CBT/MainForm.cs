@@ -40,6 +40,7 @@ public partial class MainForm : Form
         navigationPanel.Controls.Add(phonologyButton);
         navigationPanel.Controls.Add(grammarButton);
         navigationPanel.Controls.Add(lexiconButton);
+
     }
     private Button CreateNavigationButton(string text)
     {
@@ -48,12 +49,13 @@ public partial class MainForm : Form
         
         //按钮的文本和大小
         button.Text = text;
-        button.Size = new Size(220, 45);
+        button.Size = new Size(100, 45);
         button.Margin = new Padding(0, 0, 0, 10);
         button.TextAlign = ContentAlignment.MiddleLeft;
 
         return button;
     }
+    //构建导航窗口按钮
 
     private void BuildLayout()
     {
