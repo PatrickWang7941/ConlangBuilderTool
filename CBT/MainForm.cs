@@ -1,0 +1,94 @@
+namespace CBT;
+
+public partial class MainForm : Form
+{
+    // 顶部菜单栏
+    private readonly MenuStrip mainMenu = new();
+
+    // 主区域：左侧导航栏 + 右侧工作区
+    private readonly SplitContainer mainSplitContainer = new();
+
+    // 左侧导航区域
+    private readonly FlowLayoutPanel navigationPanel = new();
+
+
+    public MainForm()
+    {
+        InitializeComponent();
+
+        // 窗口设置
+        Text = "Conlang Builder Tool";
+        StartPosition = FormStartPosition.CenterScreen;
+
+        // 窗口内容区域大小：1980 × 1080
+        ClientSize = new Size(1980, 1080);
+
+        // 窗口允许缩小到的最小尺寸
+        MinimumSize = new Size(1000, 700);
+
+        // 创建主界面
+        BuildLayout();
+    }
+
+
+    private void BuildLayout()
+    {
+        // =========================
+        // 顶部菜单栏
+        // =========================
+
+        mainMenu.Dock = DockStyle.Top;
+
+
+        // =========================
+        // 主区域
+        // =========================
+
+        mainSplitContainer.Dock = DockStyle.Fill;
+
+        // 左右分栏
+        mainSplitContainer.Orientation = Orientation.Vertical;
+
+        // 左侧导航栏宽度
+        mainSplitContainer.SplitterDistance = 220;
+
+        // 左侧宽度固定
+        mainSplitContainer.FixedPanel = FixedPanel.Panel1;
+
+
+        // =========================
+        // 左侧导航区域
+        // =========================
+
+        navigationPanel.Dock = DockStyle.Fill;
+
+        // 控件从上到下排列
+        navigationPanel.FlowDirection = FlowDirection.TopDown;
+
+        // 不自动换列
+        navigationPanel.WrapContents = false;
+
+        // 内容太多时出现滚动条
+        navigationPanel.AutoScroll = true;
+
+        // 内边距
+        navigationPanel.Padding = new Padding(10);
+
+
+        // =========================
+        // 把控件组合起来
+        // =========================
+
+        // 导航栏放进左侧区域
+        mainSplitContainer.Panel1.Controls.Add(navigationPanel);
+
+        // 主区域加入窗口
+        Controls.Add(mainSplitContainer);
+
+        // 菜单栏加入窗口
+        Controls.Add(mainMenu);
+
+        // 指定主菜单
+        MainMenuStrip = mainMenu;
+    }
+}
