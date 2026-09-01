@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using CBT.Data;
 
 namespace CBT.Pages;
 
@@ -14,6 +15,8 @@ public class PhonologyPage : UserControl
     private readonly Button addPhonemeButton = new();
     // 音素分类
     private readonly ComboBox phonemeType = new();
+    //IPA符号选择器，把无法正常从输入法输入的内容用热键转换成IPA
+    private readonly ComboBox ipaSymbolPicker = new();
     //添加/选择辅音属性
     private readonly ComboBox consonantPlace = new();
     private readonly ComboBox consonantManner = new();
@@ -22,6 +25,19 @@ public class PhonologyPage : UserControl
     //为什么自动生成这么多空行？VS？
     private readonly ListBox consonantList = new();
     private readonly ListBox vowelList = new();
+    //辅音和它的语言学属性
+    private class ConsonantEntry
+    {
+        public string Symbol { get; set; } = "";
+        public string Place { get; set; } = "";
+        public string Manner { get; set; } = "";
+        public string Voicing { get; set; } = "";
+
+        public override string ToString()
+        {
+            return $"{Symbol}    {Place}    {Manner}    {Voicing}";
+        }
+    }
     public PhonologyPage()
     {
         Dock = DockStyle.Fill;
@@ -76,6 +92,25 @@ public class PhonologyPage : UserControl
 
         phonemeInput.Width = 180;
         phonemeInput.Font = new Font("Microsoft YaHei UI", 12);
+        //IPA符号选择器
+        ipaSymbolPicker.DropDownStyle = ComboBoxStyle.DropDownList;
+        ipaSymbolPicker.Width = 90;
+        ipaSymbolPicker.Font = new Font("Microsoft YaHei UI", 10);
+
+        //从IPA数据库读取符号
+        foreach (IpaConsonant consonant in IpaConsonants.All)
+        {
+            ipaSymbolPicker.Items.Add(consonant.Symbol);
+        }
+
+        ipaSymbolPicker.SelectedIndex = -1;
+
+        //选择符号后自动填入输入框
+        ipaSymbolPicker.SelectedIndexChanged += (sender, e) =>
+        {
+            if (ipaSymbolPicker.SelectedItem != null)
+                phonemeInput.Text = ipaSymbolPicker.SelectedItem.ToString();
+        };
 
         //选择音素类型
         phonemeType.Items.Add("辅音  Consonant");
@@ -132,10 +167,23 @@ public class PhonologyPage : UserControl
             "清音  Voiceless",
             "浊音  Voiced"
         });
+        //修改属性时自动更新 IPA 符号
+        consonantPlace.SelectedIndexChanged +=
+            (sender, e) => UpdateSymbolFromFeatures();
+
+        consonantManner.SelectedIndexChanged +=
+            (sender, e) => UpdateSymbolFromFeatures();
+
+        consonantVoicing.SelectedIndexChanged +=
+            (sender, e) => UpdateSymbolFromFeatures();
 
         consonantVoicing.DropDownStyle = ComboBoxStyle.DropDownList;
         consonantVoicing.Width = 150;
         consonantVoicing.SelectedIndex = 0;
+
+        //手动输入 IPA 时自动识别属性
+        phonemeInput.TextChanged +=
+            (sender, e) => UpdateFeaturesFromSymbol();
         //字体
         phonemeType.Font = new Font("Microsoft YaHei UI", 10);
         consonantPlace.Font = new Font("Microsoft YaHei UI", 10);
@@ -150,7 +198,8 @@ public class PhonologyPage : UserControl
         consonantVoicing.Margin = new Padding(0, 3, 6, 0);
         addPhonemeButton.Margin = new Padding(0, 3, 6, 0);
         removePhonemeButton.Margin = new Padding(0, 3, 0, 0);
-        
+        ipaSymbolPicker.Margin = new Padding(0, 3, 6, 0);
+
         //添加按钮
         addPhonemeButton.Text = "添加";
         addPhonemeButton.Width = 100;
@@ -183,8 +232,9 @@ public class PhonologyPage : UserControl
         vowelList.Size = new Size(500, 180);
         vowelList.Font = new Font("Microsoft YaHei UI", 12);
 
-        //输入 添加 删除
+        //输入 添加 删除 所有其他功能
         inputRow.Controls.Add(phonemeInput);
+        inputRow.Controls.Add(ipaSymbolPicker);
         inputRow.Controls.Add(phonemeType);
         inputRow.Controls.Add(consonantPlace);
         inputRow.Controls.Add(consonantManner);
@@ -206,12 +256,56 @@ public class PhonologyPage : UserControl
     }
     private void UpdateConsonantFields()
     {
-        // 只有选择“辅音”时才显示这些属性
+        //只有选择“辅音”时才显示这些属性
         bool isConsonant = phonemeType.SelectedIndex == 0;
 
         consonantPlace.Visible = isConsonant;
         consonantManner.Visible = isConsonant;
         consonantVoicing.Visible = isConsonant;
+    }
+    //根据辅音属性自动寻找 IPA 符号
+    private void UpdateSymbolFromFeatures()
+    {
+        if (phonemeType.SelectedIndex != 0)
+            return;
+
+        IpaConsonant? match = IpaConsonants.All.FirstOrDefault(x =>
+            x.Place == consonantPlace.Text &&
+            x.Manner == consonantManner.Text &&
+            x.Voicing == consonantVoicing.Text
+        );
+
+        phonemeInput.Text = match?.Symbol ?? "";
+    }
+    //根据手动输入的 IPA 符号更新辅音属性
+    private void UpdateFeaturesFromSymbol()
+    {
+        string symbol = phonemeInput.Text.Trim();
+
+        //普通键盘打不了ɡ，只能输入g然后转换，后面其他的也会一样。
+        if (symbol == "g")
+            symbol = "ɡ";
+
+        IpaConsonant? match =
+            IpaConsonants.All.FirstOrDefault(x => x.Symbol == symbol);
+
+        if (match == null)
+        {
+            ipaSymbolPicker.SelectedIndex = -1;
+            return;
+        }
+        //手动输入符号时，同步IPA选择器
+        if (ipaSymbolPicker.SelectedItem?.ToString() != match.Symbol)
+            ipaSymbolPicker.SelectedItem = match.Symbol;
+        //如果键盘输入不了IPA字符，自动转换。
+        phonemeInput.Text = match.Symbol;
+        phonemeInput.SelectionStart = phonemeInput.Text.Length;
+
+        phonemeType.SelectedIndex = 0;
+
+        consonantPlace.SelectedItem = match.Place;
+        consonantManner.SelectedItem = match.Manner;
+        consonantVoicing.SelectedItem = match.Voicing;
     }
     //添加音素，输入以后按按钮来添加
     private void AddPhoneme(object? sender, EventArgs e)
@@ -222,16 +316,32 @@ public class PhonologyPage : UserControl
         if (phoneme.Length == 0)
             return;
 
-        ListBox targetList;
-
+        //添加辅音
         if (phonemeType.SelectedIndex == 0)
-            targetList = consonantList;
-        else
-            targetList = vowelList;
+        {
+            //避免重复音素
+            foreach (ConsonantEntry item in consonantList.Items)
+            {
+                if (item.Symbol == phoneme)
+                    return;
+            }
 
-        //避免重复添加
-        if (!targetList.Items.Contains(phoneme))
-            targetList.Items.Add(phoneme);
+            ConsonantEntry consonant = new();
+
+            consonant.Symbol = phoneme;
+            consonant.Place = consonantPlace.Text;
+            consonant.Manner = consonantManner.Text;
+            consonant.Voicing = consonantVoicing.Text;
+
+            consonantList.Items.Add(consonant);
+        }
+
+        //添加元音
+        else
+        {
+            if (!vowelList.Items.Contains(phoneme))
+                vowelList.Items.Add(phoneme);
+        }
 
         phonemeInput.Clear();
         phonemeInput.Focus();
