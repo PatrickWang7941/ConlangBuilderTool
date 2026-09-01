@@ -43,10 +43,12 @@ public partial class MainForm : Form
     }
     private Button CreateNavigationButton(string text)
     {
+        //加入按钮
         Button button = new();
-
+        
+        //按钮的文本和大小
         button.Text = text;
-        button.Size = new Size(180, 45);
+        button.Size = new Size(220, 45);
         button.Margin = new Padding(0, 0, 0, 10);
         button.TextAlign = ContentAlignment.MiddleLeft;
 
@@ -66,7 +68,9 @@ public partial class MainForm : Form
         mainSplitContainer.Orientation = Orientation.Vertical;
 
         // 左侧导航栏宽度
-        mainSplitContainer.SplitterDistance = 220;
+        mainSplitContainer.SplitterDistance = 260;
+        mainSplitContainer.SplitterWidth = 4;
+        mainSplitContainer.Panel1MinSize = 260;
 
         // 左侧宽度固定
         mainSplitContainer.FixedPanel = FixedPanel.Panel1;
