@@ -49,9 +49,9 @@ public partial class MainForm : Form
         navigationPanel.Controls.Add(grammarButton);
         navigationPanel.Controls.Add(lexiconButton);
         //点击按钮来展示页面
-        //显示overview页
+        //显示overview页，后面同理，内容直接来自对应的.cs
         overviewButton.Click += (sender, e) => ShowControl(new OverviewPage());
-        phonologyButton.Click += (sender, e) => ShowPage("音系  Phonology");
+        phonologyButton.Click += (sender, e) => ShowControl(new PhonologyPage());
         grammarButton.Click += (sender, e) => ShowPage("语法  Grammar");
         lexiconButton.Click += (sender, e) => ShowPage("词汇  Lexicon");
 
