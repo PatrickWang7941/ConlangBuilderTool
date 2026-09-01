@@ -26,16 +26,18 @@ public partial class MainForm : Form
 
         BuildLayout();
         BuildNavigation();
-        
+
     }
 
     private void BuildNavigation()
     {
-        Button overviewButton = CreateNavigationButton("Overview");
-        Button phonologyButton = CreateNavigationButton("Phonology");
-        Button grammarButton = CreateNavigationButton("Grammar");
-        Button lexiconButton = CreateNavigationButton("Lexicon");
+        //按钮输出
+        Button overviewButton = CreateNavigationButton("概览  Overview");
+        Button phonologyButton = CreateNavigationButton("音系  Phonology");
+        Button grammarButton = CreateNavigationButton("语法  Grammar");
+        Button lexiconButton = CreateNavigationButton("词汇  Lexicon");
 
+        //增加按钮
         navigationPanel.Controls.Add(overviewButton);
         navigationPanel.Controls.Add(phonologyButton);
         navigationPanel.Controls.Add(grammarButton);
@@ -46,12 +48,21 @@ public partial class MainForm : Form
     {
         //加入按钮
         Button button = new();
-        
+
         //按钮的文本和大小
         button.Text = text;
-        button.Size = new Size(100, 45);
+        button.Size = new Size(200, 50);
         button.Margin = new Padding(0, 0, 0, 10);
-        button.TextAlign = ContentAlignment.MiddleLeft;
+
+        //文字变大一点，更换字体。
+        button.Font = new Font(
+            "Microsoft YaHei UI",
+            12,
+            FontStyle.Regular
+        );
+
+        //对齐。
+        button.TextAlign = ContentAlignment.MiddleCenter;
 
         return button;
     }
@@ -68,11 +79,6 @@ public partial class MainForm : Form
 
         // 左右分栏
         mainSplitContainer.Orientation = Orientation.Vertical;
-
-        // 左侧导航栏宽度
-        mainSplitContainer.SplitterDistance = 260;
-        mainSplitContainer.SplitterWidth = 4;
-        mainSplitContainer.Panel1MinSize = 260;
 
         // 左侧宽度固定
         mainSplitContainer.FixedPanel = FixedPanel.Panel1;
@@ -99,6 +105,11 @@ public partial class MainForm : Form
 
         // 主区域加入窗口
         Controls.Add(mainSplitContainer);
+
+        // 左侧导航栏宽度
+        mainSplitContainer.SplitterDistance = 260;
+        mainSplitContainer.SplitterWidth = 4;
+        mainSplitContainer.Panel1MinSize = 260;
 
         // 菜单栏加入窗口
         Controls.Add(mainMenu);
