@@ -1,3 +1,4 @@
+using CBT.Pages;
 namespace CBT;
 
 public partial class MainForm : Form
@@ -11,6 +12,8 @@ public partial class MainForm : Form
     // 左侧导航区域
     private readonly FlowLayoutPanel navigationPanel = new();
 
+    // 右侧工作区域
+    private readonly Panel workspacePanel = new();
 
     public MainForm()
     {
@@ -27,6 +30,9 @@ public partial class MainForm : Form
         BuildLayout();
         BuildNavigation();
 
+        ShowControl(new OverviewPage());
+        //把点击按钮返回的内容都来自overviewpage
+
     }
 
     private void BuildNavigation()
@@ -42,7 +48,35 @@ public partial class MainForm : Form
         navigationPanel.Controls.Add(phonologyButton);
         navigationPanel.Controls.Add(grammarButton);
         navigationPanel.Controls.Add(lexiconButton);
+        //点击按钮来展示页面
+        //显示overview页
+        overviewButton.Click += (sender, e) => ShowControl(new OverviewPage());
+        phonologyButton.Click += (sender, e) => ShowPage("音系  Phonology");
+        grammarButton.Click += (sender, e) => ShowPage("语法  Grammar");
+        lexiconButton.Click += (sender, e) => ShowPage("词汇  Lexicon");
 
+    }
+
+    private void ShowPage(string pageName)
+    {
+        workspacePanel.Controls.Clear();
+
+        Label pageTitle = new();
+
+        pageTitle.Text = pageName;
+        pageTitle.AutoSize = true;
+        pageTitle.Font = new Font("Microsoft YaHei UI", 18);
+
+        workspacePanel.Controls.Add(pageTitle);
+    }
+
+    private void ShowControl(Control page)
+    {
+        workspacePanel.Controls.Clear();
+
+        page.Dock = DockStyle.Fill;
+
+        workspacePanel.Controls.Add(page);
     }
     private Button CreateNavigationButton(string text)
     {
@@ -97,11 +131,16 @@ public partial class MainForm : Form
 
         // 内边距
         navigationPanel.Padding = new Padding(10);
+        // 右侧工作区域
+        workspacePanel.Dock = DockStyle.Fill;
+        workspacePanel.Padding = new Padding(30);
 
         // 把控件组合起来
 
         // 导航栏放进左侧区域
         mainSplitContainer.Panel1.Controls.Add(navigationPanel);
+        //右侧
+        mainSplitContainer.Panel2.Controls.Add(workspacePanel);
 
         // 主区域加入窗口
         Controls.Add(mainSplitContainer);
