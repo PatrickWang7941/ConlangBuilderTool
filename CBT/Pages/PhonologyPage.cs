@@ -14,6 +14,10 @@ public class PhonologyPage : UserControl
     private readonly Button addPhonemeButton = new();
     // 音素分类
     private readonly ComboBox phonemeType = new();
+    //添加/选择辅音属性
+    private readonly ComboBox consonantPlace = new();
+    private readonly ComboBox consonantManner = new();
+    private readonly ComboBox consonantVoicing = new();
 
     //为什么自动生成这么多空行？VS？
     private readonly ListBox consonantList = new();
@@ -80,16 +84,87 @@ public class PhonologyPage : UserControl
         phonemeType.DropDownStyle = ComboBoxStyle.DropDownList;
         phonemeType.Width = 160;
 
-        addPhonemeButton.Text = "添加  Add";
-        addPhonemeButton.Size = new Size(110, 35);
+        // 切换辅音/元音时，显示或隐藏辅音属性
+        phonemeType.SelectedIndexChanged += (sender, e) => UpdateConsonantFields();
 
-        //点击按钮时添加音素
+        //选择发音部位
+        consonantPlace.Items.AddRange(new object[]
+        {
+            "双唇  Bilabial",
+            "唇齿  Labiodental",
+            "齿  Dental",
+            "齿龈  Alveolar",
+            "龈后  Postalveolar",
+            "卷舌  Retroflex",
+            "硬腭  Palatal",
+            "软腭  Velar",
+            "小舌  Uvular",
+            "咽  Pharyngeal",
+            "声门  Glottal",
+            "唇软腭  Labial-velar"
+        });
+
+        consonantPlace.DropDownStyle = ComboBoxStyle.DropDownList;
+        consonantPlace.Width = 180;
+        consonantPlace.SelectedIndex = 0;
+
+        //选择发音方法
+        consonantManner.Items.AddRange(new object[]
+        {
+            "塞音  Plosive",
+            "鼻音  Nasal",
+            "颤音  Trill",
+            "闪音  Tap / Flap",
+            "擦音  Fricative",
+            "边擦音  Lateral fricative",
+            "近音  Approximant",
+            "边近音  Lateral approximant",
+            "塞擦音  Affricate"
+        });
+
+        consonantManner.DropDownStyle = ComboBoxStyle.DropDownList;
+        consonantManner.Width = 190;
+        consonantManner.SelectedIndex = 0;
+
+        //选择清浊
+        consonantVoicing.Items.AddRange(new object[]
+        {
+            "清音  Voiceless",
+            "浊音  Voiced"
+        });
+
+        consonantVoicing.DropDownStyle = ComboBoxStyle.DropDownList;
+        consonantVoicing.Width = 150;
+        consonantVoicing.SelectedIndex = 0;
+        //字体
+        phonemeType.Font = new Font("Microsoft YaHei UI", 10);
+        consonantPlace.Font = new Font("Microsoft YaHei UI", 10);
+        consonantManner.Font = new Font("Microsoft YaHei UI", 10);
+        consonantVoicing.Font = new Font("Microsoft YaHei UI", 10);
+
+        //统一间距
+        phonemeInput.Margin = new Padding(0, 3, 6, 0);
+        phonemeType.Margin = new Padding(0, 3, 6, 0);
+        consonantPlace.Margin = new Padding(0, 3, 6, 0);
+        consonantManner.Margin = new Padding(0, 3, 6, 0);
+        consonantVoicing.Margin = new Padding(0, 3, 6, 0);
+        addPhonemeButton.Margin = new Padding(0, 3, 6, 0);
+        removePhonemeButton.Margin = new Padding(0, 3, 0, 0);
+        
+        //添加按钮
+        addPhonemeButton.Text = "添加";
+        addPhonemeButton.Width = 100;
+        addPhonemeButton.Height = phonemeType.PreferredHeight;
+        addPhonemeButton.Font = new Font("Microsoft YaHei UI", 10);
+
         addPhonemeButton.Click += AddPhoneme;
 
-        //点击按钮时删除选中的音素
-        removePhonemeButton.Text = "删除  Remove";
-        removePhonemeButton.Size = new Size(110, 35);
+        //删除按钮
+        removePhonemeButton.Text = "删除";
+        removePhonemeButton.Width = 100;
+        removePhonemeButton.Height = phonemeType.PreferredHeight;
         removePhonemeButton.Click += RemovePhoneme;
+        removePhonemeButton.Font = new Font("Microsoft YaHei UI", 10);
 
         //列出音素列表:
         //辅音列表
@@ -100,7 +175,6 @@ public class PhonologyPage : UserControl
         consonantList.Size = new Size(500, 180);
         consonantList.Font = new Font("Microsoft YaHei UI", 12);
 
-
         // 元音列表
         Label vowelTitle = new();
         vowelTitle.Text = "元音  Vowels";
@@ -109,11 +183,16 @@ public class PhonologyPage : UserControl
         vowelList.Size = new Size(500, 180);
         vowelList.Font = new Font("Microsoft YaHei UI", 12);
 
-        //输入 添加 和删除
+        //输入 添加 删除
         inputRow.Controls.Add(phonemeInput);
         inputRow.Controls.Add(phonemeType);
+        inputRow.Controls.Add(consonantPlace);
+        inputRow.Controls.Add(consonantManner);
+        inputRow.Controls.Add(consonantVoicing);
         inputRow.Controls.Add(addPhonemeButton);
         inputRow.Controls.Add(removePhonemeButton);
+
+        UpdateConsonantFields();
 
         section.Controls.Add(sectionTitle);
         section.Controls.Add(inputRow);
@@ -125,10 +204,23 @@ public class PhonologyPage : UserControl
 
         return section;
     }
+    private void UpdateConsonantFields()
+    {
+        // 只有选择“辅音”时才显示这些属性
+        bool isConsonant = phonemeType.SelectedIndex == 0;
+
+        consonantPlace.Visible = isConsonant;
+        consonantManner.Visible = isConsonant;
+        consonantVoicing.Visible = isConsonant;
+    }
     //添加音素，输入以后按按钮来添加
     private void AddPhoneme(object? sender, EventArgs e)
     {
         string phoneme = phonemeInput.Text.Trim();
+
+        //不样添加空内容
+        if (phoneme.Length == 0)
+            return;
 
         ListBox targetList;
 
