@@ -52,7 +52,6 @@ public partial class MainForm : Form
         UpdateWindowTitle();
     }
 
-
     // 根据当前项目文件和修改状态刷新窗口标题。
     private void UpdateWindowTitle()
     {
@@ -94,9 +93,55 @@ public partial class MainForm : Form
         phonologyButton.Click += (sender, e) => ShowControl(new PhonologyPage(currentProject,MarkProjectModified));
         grammarButton.Click += (sender, e) => ShowPage("语法  Grammar");
         lexiconButton.Click += (sender, e) => ShowPage("词汇  Lexicon");
+        FormClosing += MainForm_FormClosing;
 
     }
+    // 关闭程序前检查是否存在尚未保存的修改。
+    private void MainForm_FormClosing(
+        object? sender,
+        FormClosingEventArgs e)
+    {
+        if (!ConfirmUnsavedChanges())
+        {
+            e.Cancel = true;
+        }
+    }
+    // 如果当前项目有未保存修改，询问用户是否保存。
+    // 返回 false 表示当前操作应该取消。
+    private bool ConfirmUnsavedChanges()
+    {
+        if (!isModified)
+        {
+            return true;
+        }
 
+        DialogResult result =
+            MessageBox.Show(
+                this,
+                "当前项目有尚未保存的修改。\n" +
+                "是否在继续之前保存？\n\n" +
+                "The current project has unsaved changes.\n" +
+                "Save before continuing?",
+                "Conlang Builder Tool",
+                MessageBoxButtons.YesNoCancel,
+                MessageBoxIcon.Warning);
+
+        if (result == DialogResult.Cancel)
+        {
+            return false;
+        }
+
+        if (result == DialogResult.No)
+        {
+            return true;
+        }
+
+        SaveProject();
+
+        // 如果用户在 Save As 窗口里又点了取消，
+        // isModified 仍然会是 true，因此原操作也取消。
+        return !isModified;
+    }
     private void ShowPage(string pageName)
     {
         workspacePanel.Controls.Clear();
@@ -254,21 +299,15 @@ public partial class MainForm : Form
 
 
     // 创建一个新的空项目，并清除当前项目对应的文件路径。
-    private void NewProject()
-    {
-        currentProject = new ConlangProject();
-
-        // 新项目尚未保存，因此暂时没有文件路径。
-        currentFilePath = null;
-
-        // 新建项目后返回概览页。
-        ShowControl(new OverviewPage());
-    }
 
 
     // 让用户选择一个 .cbt 文件，并将其中的数据读取为当前项目。
     private void OpenProject()
     {
+        if (!ConfirmUnsavedChanges())
+        {
+            return;
+        }
         using OpenFileDialog dialog = new()
         {
             Filter =
@@ -278,7 +317,7 @@ public partial class MainForm : Form
             DefaultExt = "cbt",
             AddExtension = true,
             CheckFileExists = true,
-            Multiselect = false
+            Multiselect = false 
         };
 
         // 用户取消选择文件时不进行任何操作。
@@ -393,6 +432,10 @@ public partial class MainForm : Form
     }
     private void NewProject()
     {
+        if (!ConfirmUnsavedChanges())
+        {
+            return;
+        }
         currentProject =
             new ConlangProject();
 

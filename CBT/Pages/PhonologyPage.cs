@@ -170,7 +170,7 @@ public class PhonologyPage : UserControl
     {
     }
 
-    public PhonologyPage(ConlangProject project, Action? projectModified)
+    public PhonologyPage(ConlangProject project,Action? projectModified)
     {
         this.project = project;
         this.projectModified =
@@ -1665,6 +1665,7 @@ public class PhonologyPage : UserControl
             RefreshVowelChart();
         }
 
+        projectModified?.Invoke();
         phonemeInput.Clear();
         phonemeInput.Focus();
     }
@@ -1680,6 +1681,7 @@ public class PhonologyPage : UserControl
             consonantList.Items.Remove(consonant);
 
             RefreshConsonantChart();
+            projectModified?.Invoke();
 
             return;
         }
@@ -1692,6 +1694,7 @@ public class PhonologyPage : UserControl
             vowelList.Items.Remove(vowel);
 
             RefreshVowelChart();
+            projectModified?.Invoke();
         }
     }
 
