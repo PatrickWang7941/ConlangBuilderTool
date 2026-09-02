@@ -1,3 +1,4 @@
+using CBT.Models;
 using CBT.Pages;
 namespace CBT;
 
@@ -14,7 +15,8 @@ public partial class MainForm : Form
 
     // 右侧工作区域
     private readonly Panel workspacePanel = new();
-
+    // 当前工作项目
+    private ConlangProject currentProject = new();
     public MainForm()
     {
         InitializeComponent();
@@ -51,7 +53,7 @@ public partial class MainForm : Form
         //点击按钮来展示页面
         //显示overview页，后面同理，内容直接来自对应的.cs
         overviewButton.Click += (sender, e) => ShowControl(new OverviewPage());
-        phonologyButton.Click += (sender, e) => ShowControl(new PhonologyPage());
+        phonologyButton.Click += (sender, e) => ShowControl(new PhonologyPage(currentProject));
         grammarButton.Click += (sender, e) => ShowPage("语法  Grammar");
         lexiconButton.Click += (sender, e) => ShowPage("词汇  Lexicon");
 

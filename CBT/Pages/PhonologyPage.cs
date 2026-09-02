@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using CBT.Models;
 using CBT.Data;
 
 namespace CBT.Pages;
@@ -33,6 +34,7 @@ public class PhonologyPage : UserControl
     private readonly ComboBox vowelBackness = new();
     private readonly ComboBox vowelRoundedness = new();
     private readonly ListBox vowelList = new();
+    private readonly ConlangProject project;
 
     private SelectionMode selectionMode = SelectionMode.Detailed;
     private bool isSynchronizingSelection;
@@ -135,12 +137,37 @@ public class PhonologyPage : UserControl
             return $"{Symbol}    {place}{voicing}{manner}";
         }
     }
+    // 元音和它的语言学属性
+    private class VowelEntry
+    {
+        public string Symbol { get; set; } = "";
+        public string Height { get; set; } = "";
+        public string Backness { get; set; } = "";
+        public string Roundedness { get; set; } = "";
+
+        // 把元音符号和主要属性组合成清单中的简短说明。
+        public override string ToString()
+        {
+            string height = GetChinesePart(Height);
+            string backness = GetChinesePart(Backness);
+            string roundedness = GetChinesePart(Roundedness);
+
+            return $"{Symbol}    {roundedness}{backness}{height}元音";
+        }
+    }
 
     // 初始化页面布局并创建音素清单区域。
     public PhonologyPage()
+        : this(new ConlangProject())
     {
+    }
+    public PhonologyPage(ConlangProject project)
+    {
+        this.project = project;
+
         Dock = DockStyle.Fill;
         Padding = new Padding(30);
+
 
         Label title = new()
         {
@@ -1263,7 +1290,31 @@ public class PhonologyPage : UserControl
 
         isSynchronizingSelection = wasSynchronizing;
     }
+    // 把项目中的音系数据加载到页面控件。
+    private void LoadProjectPhonology()
+    {
+        consonantList.Items.Clear();
+        vowelList.Items.Clear();
 
+        foreach (ConsonantPhoneme consonant in project.Phonology.Consonants)
+        {
+            consonantList.Items.Add(
+                new ConsonantEntry
+                {
+                    Symbol = consonant.Symbol,
+                    Place = consonant.Place,
+                    Manner = consonant.Manner,
+                    Voicing = consonant.Voicing
+                });
+        }
+
+        foreach (VowelPhoneme vowel in project.Phonology.Vowels)
+        {
+            vowelList.Items.Add(vowel.Symbol);
+        }
+
+        RefreshConsonantChart();
+    }
     // 把当前输入的音素加入对应清单，并刷新辅音音系表。
     private void AddPhoneme(object? sender, EventArgs e)
     {
@@ -1276,15 +1327,15 @@ public class PhonologyPage : UserControl
 
         if (phonemeType.SelectedIndex == 0)
         {
-            foreach (ConsonantEntry item in consonantList.Items)
+            phoneme = NormalizeInputSymbol(phoneme);
+
+            if (project.Phonology.Consonants.Any(
+                x => x.Symbol == phoneme))
             {
-                if (item.Symbol == phoneme)
-                {
-                    return;
-                }
+                return;
             }
 
-            ConsonantEntry consonant = new()
+            ConsonantPhoneme projectConsonant = new()
             {
                 Symbol = phoneme,
                 Place = consonantPlace.Text,
@@ -1292,35 +1343,66 @@ public class PhonologyPage : UserControl
                 Voicing = consonantVoicing.Text
             };
 
-            consonantList.Items.Add(consonant);
+            project.Phonology.Consonants.Add(projectConsonant);
+
+            ConsonantEntry displayConsonant = new()
+            {
+                Symbol = projectConsonant.Symbol,
+                Place = projectConsonant.Place,
+                Manner = projectConsonant.Manner,
+                Voicing = projectConsonant.Voicing
+            };
+
+            consonantList.Items.Add(displayConsonant);
+
             RefreshConsonantChart();
         }
         else
         {
-            if (!vowelList.Items.Contains(phoneme))
+            if (project.Phonology.Vowels.Any(
+                x => x.Symbol == phoneme))
             {
-                vowelList.Items.Add(phoneme);
+                return;
             }
+
+            VowelPhoneme projectVowel = new()
+            {
+                Symbol = phoneme,
+                Height = vowelHeight.Text,
+                Backness = vowelBackness.Text,
+                Roundedness = vowelRoundedness.Text
+            };
+
+            project.Phonology.Vowels.Add(projectVowel);
+
+            vowelList.Items.Add(projectVowel.Symbol);
         }
 
         phonemeInput.Clear();
         phonemeInput.Focus();
     }
 
-    // 删除当前选中的辅音或元音，并在需要时刷新音系表。
+    // 删除当前选中的辅音或元音，同时修改项目数据。
     private void RemovePhoneme(object? sender, EventArgs e)
     {
-        // 优先删除辅音列表中的选中项。
-        if (consonantList.SelectedItem != null)
+        if (consonantList.SelectedItem is ConsonantEntry consonant)
         {
-            consonantList.Items.Remove(consonantList.SelectedItem);
+            project.Phonology.Consonants.RemoveAll(
+                x => x.Symbol == consonant.Symbol);
+
+            consonantList.Items.Remove(consonant);
+
             RefreshConsonantChart();
+
             return;
         }
 
-        if (vowelList.SelectedItem != null)
+        if (vowelList.SelectedItem is string vowelSymbol)
         {
-            vowelList.Items.Remove(vowelList.SelectedItem);
+            project.Phonology.Vowels.RemoveAll(
+                x => x.Symbol == vowelSymbol);
+
+            vowelList.Items.Remove(vowelSymbol);
         }
     }
 
