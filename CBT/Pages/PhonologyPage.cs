@@ -50,6 +50,18 @@ public class PhonologyPage : UserControl
     private readonly Dictionary<(string Place, string Manner, string Voicing), Label>
         consonantChartCells = new();
     private readonly ListBox vowelList = new();
+
+    //----------------这就是教训.到处乱塞导致乱掉了不知道该放哪了.下面放元音有关的代码，不要动！————————————————————————————
+    //添加或选择元音属性
+    private readonly ComboBox vowelHeight = new();
+    private readonly ComboBox vowelBackness = new();
+    private readonly ComboBox vowelRoundeness = new();
+
+
+
+    //———————————————————————————————————————————元音到这里结束———————————————————————————————————————————————————————
+
+
     //下拉栏里的分组标题和IPA项目共用这个显示类型
     private class IpaDisplayItem
     {
@@ -299,6 +311,63 @@ public class PhonologyPage : UserControl
             "清音  Voiceless",
             "浊音  Voiced"
         });
+        //选择元音高度
+        vowelHeight.Items.AddRange(new object[]
+        {
+            "闭  Close",
+            "近闭  Near-close",
+            "半闭  Close-mid",
+            "中  Mid",
+            "半开  Open-mid",
+            "近开  Near-open",
+            "开  Open"
+        });
+
+        vowelHeight.DropDownStyle = ComboBoxStyle.DropDownList;
+        vowelHeight.Width = 170;
+        vowelHeight.SelectedIndex = 0;
+
+        //选择元音前后度
+        vowelBackness.Items.AddRange(new object[]
+        {
+            "前  Front",
+            "央  Central",
+            "后  Back"
+        });
+
+        vowelBackness.DropDownStyle = ComboBoxStyle.DropDownList;
+        vowelBackness.Width = 150;
+        vowelBackness.SelectedIndex = 0;
+
+        //选择圆唇
+        vowelRoundedness.Items.AddRange(new object[]
+        {
+            "不圆唇  Unrounded",
+            "圆唇  Rounded"
+        });
+
+        vowelRoundedness.DropDownStyle = ComboBoxStyle.DropDownList;
+        vowelRoundedness.Width = 170;
+        vowelRoundedness.SelectedIndex = 0;
+        //字体
+        vowelHeight.Font = new Font("Microsoft YaHei UI", 10);
+        vowelBackness.Font = new Font("Microsoft YaHei UI", 10);
+        vowelRoundedness.Font = new Font("Microsoft YaHei UI", 10);
+        //间距
+        vowelHeight.Margin = new Padding(0, 3, 6, 0);
+        vowelBackness.Margin = new Padding(0, 3, 6, 0);
+        vowelRoundedness.Margin = new Padding(0, 3, 6, 0);
+
+
+        //修改元音属性时自动更新 IPA
+        vowelHeight.SelectedIndexChanged +=
+            (sender, e) => UpdateVowelSymbolFromFeatures();
+
+        vowelBackness.SelectedIndexChanged +=
+            (sender, e) => UpdateVowelSymbolFromFeatures();
+
+        vowelRoundedness.SelectedIndexChanged +=
+            (sender, e) => UpdateVowelSymbolFromFeatures();
         //修改属性时自动更新 IPA 符号
         consonantPlace.SelectedIndexChanged +=
             (sender, e) => UpdateSymbolFromFeatures();
@@ -373,6 +442,9 @@ public class PhonologyPage : UserControl
         inputRow.Controls.Add(consonantPlace);
         inputRow.Controls.Add(consonantManner);
         inputRow.Controls.Add(consonantVoicing);
+        inputRow.Controls.Add(vowelHeight);
+        inputRow.Controls.Add(vowelBackness);
+        inputRow.Controls.Add(vowelRoundedness);
         inputRow.Controls.Add(ipaCategory);
         inputRow.Controls.Add(ipaChoice);
         inputRow.Controls.Add(addPhonemeButton);
@@ -670,6 +742,7 @@ public class PhonologyPage : UserControl
     private void UpdateSelectionMode()
     {
         bool isConsonant = phonemeType.SelectedIndex == 0;
+        bool isVowel = phonemeType.SelectedIndex == 1;
         IpaConsonant? currentConsonant = FindConsonantFromInput();
 
         //详细模式
@@ -684,6 +757,10 @@ public class PhonologyPage : UserControl
         consonantPlace.Visible = detailedMode && isConsonant;
         consonantManner.Visible = detailedMode && isConsonant;
         consonantVoicing.Visible = detailedMode && isConsonant;
+        //详细模式显示元音属性
+        vowelHeight.Visible = detailedMode && isVowel;
+        vowelBackness.Visible = detailedMode && isVowel;
+        vowelRoundedness.Visible = detailedMode && isVowel;
         //引导模式显示分类和ipa符号
         ipaCategory.Visible = guidedMode;
         ipaChoice.Visible = guidedMode;
@@ -698,9 +775,15 @@ public class PhonologyPage : UserControl
         //详细模式
         if (selectionMode == SelectionMode.Detailed)
         {
-            if (currentConsonant != null)
-                SelectDetailedConsonant(currentConsonant);
-
+            if (isConsonant)
+            {
+                if (currentConsonant != null)
+                    SelectDetailedConsonant(currentConsonant);
+            }
+            else
+            {
+                UpdateVowelSymbolFromFeatures();
+            }
             return;
         }
         //列表模式
@@ -862,22 +945,80 @@ public class PhonologyPage : UserControl
 
         ApplyConsonant(match);
     }
+    //根据元音属性自动寻找 IPA 符号
+    private void UpdateVowelSymbolFromFeatures()
+    {
+        if (isSynchronizingSelection || phonemeType.SelectedIndex != 1)
+            return;
+
+        IpaVowel? match = IpaVowels.All.FirstOrDefault(x =>
+            x.Height == vowelHeight.Text &&
+            x.Backness == vowelBackness.Text &&
+            x.Roundedness == vowelRoundedness.Text
+        );
+
+        if (match == null)
+        {
+            bool wasSynchronizing = isSynchronizingSelection;
+            isSynchronizingSelection = true;
+
+            phonemeInput.Clear();
+
+            isSynchronizingSelection = wasSynchronizing;
+
+            noMatchingPhonemeLabel.Visible = true;
+            addPhonemeButton.Enabled = false;
+
+            return;
+        }
+
+        noMatchingPhonemeLabel.Visible = false;
+        addPhonemeButton.Enabled = true;
+
+        ApplyVowel(match);
+    }
+    //把一个元音同步到输入框和属性框
+    private void ApplyVowel(IpaVowel vowel)
+    {
+        bool wasSynchronizing = isSynchronizingSelection;
+        isSynchronizingSelection = true;
+
+        phonemeInput.Text = vowel.Symbol;
+        phonemeInput.SelectionStart = phonemeInput.Text.Length;
+
+        vowelHeight.SelectedItem = vowel.Height;
+        vowelBackness.SelectedItem = vowel.Backness;
+        vowelRoundedness.SelectedItem = vowel.Roundedness;
+
+        isSynchronizingSelection = wasSynchronizing;
+    }
     //根据手动输入的 IPA 符号更新辅音属性
     private void UpdateFeaturesFromSymbol()
     {
         if (isSynchronizingSelection)
             return;
 
-        IpaConsonant? match = FindConsonantFromInput();
-
-        if (match == null)
+        //辅音
+        if (phonemeType.SelectedIndex == 0)
         {
-            ClearIpaSelections();
+            IpaConsonant? consonant = FindConsonantFromInput();
+            if (consonant == null)
+            {
+                ClearIpaSelections();
+                return;
+            }
+            ApplyConsonant(consonant);
             return;
         }
 
-        //普通键盘输入g时，在这里同步转换成标准IPA字符ɡ
-        ApplyConsonant(match);
+        //元音
+        string symbol = phonemeInput.Text.Trim();
+
+        IpaVowel? vowel =
+            IpaVowels.All.FirstOrDefault(x => x.Symbol == symbol);
+        if (vowel == null)
+            return;
+        ApplyVowel(vowel);
     }
     //把数据库里的辅音类别改成适合下拉栏显示的双语复数形式
     private static string GetCategoryDisplayName(string manner)
