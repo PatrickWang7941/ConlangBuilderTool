@@ -400,7 +400,7 @@ public class PhonologyPage : UserControl
     {
         Panel chartContainer = new();
 
-        chartContainer.Size = new Size(1480, 500);
+        chartContainer.Width = 1480;
         chartContainer.AutoScroll = true;
         chartContainer.Margin = new Padding(0, 15, 0, 25);
 
@@ -553,7 +553,10 @@ public class PhonologyPage : UserControl
         }
 
         chartContainer.Controls.Add(consonantChart);
-
+        //根据辅音表格的大小调整空间，这样没有一堆空白
+        chartContainer.Height =
+            consonantChart.PreferredSize.Height +
+            SystemInformation.HorizontalScrollBarHeight + 5;
         return chartContainer;
     }
     //根据辅音清单刷新辅音音系表
