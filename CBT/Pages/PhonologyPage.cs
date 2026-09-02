@@ -2,7 +2,7 @@
 using CBT.Models;
 
 namespace CBT.Pages;
-//————————————————————以下代码由AI辅助整理为更整洁的布局，以便以后的修改。——————————————————————
+//————————————————————以下代码由AI辅助整理为更整洁的布局，包括统一换行和修改注释格式，以便以后的修改。——————————————————————
 public class PhonologyPage : UserControl
 {
     // 音素输入与操作控件
@@ -451,6 +451,7 @@ public class PhonologyPage : UserControl
             "齿  Dental",
             "齿龈  Alveolar",
             "龈后  Postalveolar",
+            "龈腭  Alveolo-palatal",
             "卷舌  Retroflex",
             "硬腭  Palatal",
             "软腭  Velar",
@@ -622,6 +623,7 @@ public class PhonologyPage : UserControl
             "齿\nDental",
             "齿龈\nAlveolar",
             "龈后\nPostalveolar",
+            "龈腭\nAlveolo-palatal",
             "卷舌\nRetroflex",
             "硬腭\nPalatal",
             "软腭\nVelar",
@@ -638,6 +640,7 @@ public class PhonologyPage : UserControl
             "齿  Dental",
             "齿龈  Alveolar",
             "龈后  Postalveolar",
+            "龈腭  Alveolo-palatal",
             "卷舌  Retroflex",
             "硬腭  Palatal",
             "软腭  Velar",
@@ -650,6 +653,7 @@ public class PhonologyPage : UserControl
         string[] manners =
         {
             "塞音\nPlosive",
+            "塞擦音\nAffricate",
             "鼻音\nNasal",
             "颤音\nTrill",
             "闪音\nTap / Flap",
@@ -662,6 +666,7 @@ public class PhonologyPage : UserControl
         string[] mannerKeys =
         {
             "塞音  Plosive",
+            "塞擦音  Affricate",
             "鼻音  Nasal",
             "颤音  Trill",
             "闪音  Tap / Flap",
@@ -1811,6 +1816,7 @@ public class PhonologyPage : UserControl
         return manner switch
         {
             "塞音  Plosive" => "塞音  Plosives",
+            "塞擦音  Affricate" => "塞擦音  Affricates",
             "鼻音  Nasal" => "鼻音  Nasals",
             "颤音  Trill" => "颤音  Trills",
             "闪音  Tap / Flap" => "闪音  Taps / Flaps",

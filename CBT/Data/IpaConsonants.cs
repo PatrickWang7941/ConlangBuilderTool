@@ -27,6 +27,19 @@ public static class IpaConsonants
     new("ɢ", "小舌  Uvular", "塞音  Plosive", "浊音  Voiced"),
     new("ʔ", "声门  Glottal", "塞音  Plosive", "清音  Voiceless"),
 
+    // Affricates
+    new("t͡s", "齿龈  Alveolar", "塞擦音  Affricate", "清音  Voiceless"),
+    new("d͡z", "齿龈  Alveolar", "塞擦音  Affricate", "浊音  Voiced"),
+
+    new("t͡ʃ", "龈后  Postalveolar", "塞擦音  Affricate", "清音  Voiceless"),
+    new("d͡ʒ", "龈后  Postalveolar", "塞擦音  Affricate", "浊音  Voiced"),
+
+    new("t͡ɕ", "龈腭  Alveolo-palatal", "塞擦音  Affricate", "清音  Voiceless"),
+    new("d͡ʑ", "龈腭  Alveolo-palatal", "塞擦音  Affricate", "浊音  Voiced"),
+
+    new("ʈ͡ʂ", "卷舌  Retroflex", "塞擦音  Affricate", "清音  Voiceless"),
+    new("ɖ͡ʐ", "卷舌  Retroflex", "塞擦音  Affricate", "浊音  Voiced"),
+
     // Nasals
     new("m", "双唇  Bilabial", "鼻音  Nasal", "浊音  Voiced"),
     new("ɱ", "唇齿  Labiodental", "鼻音  Nasal", "浊音  Voiced"),
