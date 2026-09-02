@@ -18,13 +18,19 @@ public partial class MainForm : Form
     private readonly Panel workspacePanel = new();
     // 当前工作项目
     private ConlangProject currentProject = new();
+    // 当前项目对应的文件路径。
+    // 新建但尚未保存的项目没有路径。
     private string? currentFilePath;
+
+    // 当前项目是否存在尚未保存的修改。
+    private bool isModified;
     public MainForm()
     {
         InitializeComponent();
 
         //这部分我故意没有留comment:) 养成良好的编程习惯！
         Text = "Conlang Builder Tool";
+        UpdateWindowTitle();
         StartPosition = FormStartPosition.CenterScreen;
 
         ClientSize = new Size(1980, 1080);
@@ -39,7 +45,36 @@ public partial class MainForm : Form
         //把点击按钮返回的内容都来自overviewpage
 
     }
+    // 标记当前项目已经发生修改，并刷新窗口标题。
+    private void MarkProjectModified()
+    {
+        isModified = true;
+        UpdateWindowTitle();
+    }
 
+
+    // 根据当前项目文件和修改状态刷新窗口标题。
+    private void UpdateWindowTitle()
+    {
+        string projectName;
+
+        if (string.IsNullOrWhiteSpace(currentFilePath))
+        {
+            projectName = "Untitled";
+        }
+        else
+        {
+            projectName = Path.GetFileName(currentFilePath);
+        }
+
+        string modifiedMark =
+            isModified ? " *" : "";
+
+        Text =
+            $"Conlang Builder Tool - " +
+            $"{projectName}" +
+            $"{modifiedMark}";
+    }
     private void BuildNavigation()
     {
         //按钮输出
@@ -56,7 +91,7 @@ public partial class MainForm : Form
         //点击按钮来展示页面
         //显示overview页，后面同理，内容直接来自对应的.cs
         overviewButton.Click += (sender, e) => ShowControl(new OverviewPage());
-        phonologyButton.Click += (sender, e) => ShowControl(new PhonologyPage(currentProject));
+        phonologyButton.Click += (sender, e) => ShowControl(new PhonologyPage(currentProject,MarkProjectModified));
         grammarButton.Click += (sender, e) => ShowPage("语法  Grammar");
         lexiconButton.Click += (sender, e) => ShowPage("词汇  Lexicon");
 
@@ -265,6 +300,9 @@ public partial class MainForm : Form
             currentFilePath =
                 dialog.FileName;
 
+            isModified = false;
+            UpdateWindowTitle();
+
             // 打开新项目后返回概览页。
             // 用户再次进入音系页面时，会读取新的 currentProject。
             ShowControl(new OverviewPage());
@@ -349,9 +387,23 @@ public partial class MainForm : Form
         {
             currentFilePath =
                 dialog.FileName;
+
+            UpdateWindowTitle();
         }
     }
+    private void NewProject()
+    {
+        currentProject =
+            new ConlangProject();
 
+        currentFilePath = null;
+
+        isModified = false;
+        UpdateWindowTitle();
+
+        ShowControl(
+            new OverviewPage());
+    }
 
     // 将当前项目保存到指定路径。
     // 保存成功返回 true，失败返回 false。
@@ -364,6 +416,9 @@ public partial class MainForm : Form
             ProjectFileService.Save(
                 filePath,
                 currentProject);
+
+            isModified = false;
+            UpdateWindowTitle();
 
             return true;
         }
