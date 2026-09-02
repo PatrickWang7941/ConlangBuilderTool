@@ -41,6 +41,8 @@ public class PhonologyPage : UserControl
         (string Height, string Backness, string Roundedness),
         Label> vowelChartCells = new();
     private readonly ConlangProject project;
+    // 当音系数据发生修改时通知主窗口。
+    private readonly Action? projectModified;
 
     private SelectionMode selectionMode = SelectionMode.Detailed;
     private bool isSynchronizingSelection;
@@ -164,12 +166,15 @@ public class PhonologyPage : UserControl
 
     // 初始化页面布局并创建音素清单区域。
     public PhonologyPage()
-        : this(new ConlangProject())
+        : this(new ConlangProject(),null)
     {
     }
-    public PhonologyPage(ConlangProject project)
+
+    public PhonologyPage(ConlangProject project, Action? projectModified)
     {
         this.project = project;
+        this.projectModified =
+            projectModified;
 
         Dock = DockStyle.Fill;
         Padding = new Padding(30, 0, 30, 30);
