@@ -172,15 +172,7 @@ public class PhonologyPage : UserControl
         this.project = project;
 
         Dock = DockStyle.Fill;
-        Padding = new Padding(30);
-
-
-        Label title = new()
-        {
-            Text = "音系  Phonology",
-            AutoSize = true,
-            Font = new Font("Microsoft YaHei UI", 18)
-        };
+        Padding = new Padding(30, 0, 30, 30);
 
         FlowLayoutPanel contentPanel = new()
         {
@@ -188,10 +180,9 @@ public class PhonologyPage : UserControl
             FlowDirection = FlowDirection.TopDown,
             WrapContents = false,
             AutoScroll = true,
-            Padding = new Padding(0, 20, 0, 0)
+            Padding = new Padding(0)
         };
 
-        contentPanel.Controls.Add(title);
         contentPanel.Controls.Add(BuildPhonemeInventory());
         Controls.Add(contentPanel);
         LoadProjectPhonology();
@@ -205,7 +196,7 @@ public class PhonologyPage : UserControl
             FlowDirection = FlowDirection.TopDown,
             WrapContents = false,
             AutoSize = true,
-            Margin = new Padding(0, 25, 0, 0)
+            Margin = new Padding(0)
         };
 
         Label sectionTitle = new()
