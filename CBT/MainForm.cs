@@ -1,5 +1,6 @@
 using CBT.Models;
 using CBT.Pages;
+using CBT.Services;
 namespace CBT;
 
 public partial class MainForm : Form
@@ -17,6 +18,7 @@ public partial class MainForm : Form
     private readonly Panel workspacePanel = new();
     // 当前工作项目
     private ConlangProject currentProject = new();
+    private string? currentFilePath;
     public MainForm()
     {
         InitializeComponent();
@@ -30,6 +32,7 @@ public partial class MainForm : Form
         MinimumSize = new Size(1000, 700);
 
         BuildLayout();
+        BuildFileMenu();
         BuildNavigation();
 
         ShowControl(new OverviewPage());
@@ -157,5 +160,226 @@ public partial class MainForm : Form
 
         // 指定主菜单
         MainMenuStrip = mainMenu;
+    }
+    // 构建顶部文件菜单，并连接新建、打开、保存和另存为功能。
+    private void BuildFileMenu()
+    {
+        ToolStripMenuItem fileMenu = new("文件  File");
+
+        ToolStripMenuItem newProjectItem =
+            new("新建项目  New Project");
+
+        ToolStripMenuItem openProjectItem =
+            new("打开项目  Open Project");
+
+        ToolStripMenuItem saveProjectItem =
+            new("保存  Save");
+
+        ToolStripMenuItem saveProjectAsItem =
+            new("另存为  Save As");
+
+        // 设置常用文件操作快捷键。
+        newProjectItem.ShortcutKeys =
+            Keys.Control | Keys.N;
+
+        openProjectItem.ShortcutKeys =
+            Keys.Control | Keys.O;
+
+        saveProjectItem.ShortcutKeys =
+            Keys.Control | Keys.S;
+
+        saveProjectAsItem.ShortcutKeys =
+            Keys.Control | Keys.Shift | Keys.S;
+
+        // 点击菜单项时调用对应的项目操作。
+        newProjectItem.Click +=
+            (sender, e) => NewProject();
+
+        openProjectItem.Click +=
+            (sender, e) => OpenProject();
+
+        saveProjectItem.Click +=
+            (sender, e) => SaveProject();
+
+        saveProjectAsItem.Click +=
+            (sender, e) => SaveProjectAs();
+
+        // 将菜单项按顺序加入文件菜单。
+        fileMenu.DropDownItems.Add(newProjectItem);
+        fileMenu.DropDownItems.Add(openProjectItem);
+
+        fileMenu.DropDownItems.Add(
+            new ToolStripSeparator());
+
+        fileMenu.DropDownItems.Add(saveProjectItem);
+        fileMenu.DropDownItems.Add(saveProjectAsItem);
+
+        mainMenu.Items.Add(fileMenu);
+    }
+
+
+    // 创建一个新的空项目，并清除当前项目对应的文件路径。
+    private void NewProject()
+    {
+        currentProject = new ConlangProject();
+
+        // 新项目尚未保存，因此暂时没有文件路径。
+        currentFilePath = null;
+
+        // 新建项目后返回概览页。
+        ShowControl(new OverviewPage());
+    }
+
+
+    // 让用户选择一个 .cbt 文件，并将其中的数据读取为当前项目。
+    private void OpenProject()
+    {
+        using OpenFileDialog dialog = new()
+        {
+            Filter =
+                "CBT Project (*.cbt)|*.cbt|" +
+                "All files (*.*)|*.*",
+
+            DefaultExt = "cbt",
+            AddExtension = true,
+            CheckFileExists = true,
+            Multiselect = false
+        };
+
+        // 用户取消选择文件时不进行任何操作。
+        if (dialog.ShowDialog(this) !=
+            DialogResult.OK)
+        {
+            return;
+        }
+
+        try
+        {
+            // 从文件中读取项目数据。
+            currentProject =
+                ProjectFileService.Load(
+                    dialog.FileName);
+
+            // 保存当前项目的文件路径，
+            // 之后使用“保存”时可以直接覆盖这个文件。
+            currentFilePath =
+                dialog.FileName;
+
+            // 打开新项目后返回概览页。
+            // 用户再次进入音系页面时，会读取新的 currentProject。
+            ShowControl(new OverviewPage());
+        }
+        catch (Exception ex)
+        {
+            // 文件损坏、格式错误或读取失败时显示错误信息。
+            MessageBox.Show(
+                this,
+                $"无法打开项目。\n" +
+                $"Could not open the project.\n\n" +
+                ex.Message,
+                "Conlang Builder Tool",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+        }
+    }
+
+
+    // 保存当前项目。
+    // 如果项目还没有文件路径，则自动进入“另存为”流程。
+    private void SaveProject()
+    {
+        if (string.IsNullOrWhiteSpace(
+            currentFilePath))
+        {
+            SaveProjectAs();
+            return;
+        }
+
+        // 已经保存过的项目直接覆盖原文件。
+        SaveProjectTo(currentFilePath);
+    }
+
+
+    // 让用户选择新的文件路径，并把当前项目保存为 .cbt 文件。
+    private void SaveProjectAs()
+    {
+        using SaveFileDialog dialog = new()
+        {
+            Filter =
+                "CBT Project (*.cbt)|*.cbt|" +
+                "All files (*.*)|*.*",
+
+            DefaultExt = "cbt",
+            AddExtension = true,
+            OverwritePrompt = true
+        };
+
+        // 如果项目已经有文件路径，
+        // 另存为时默认使用原文件名和所在目录。
+        if (!string.IsNullOrWhiteSpace(
+            currentFilePath))
+        {
+            dialog.FileName =
+                Path.GetFileName(
+                    currentFilePath);
+
+            dialog.InitialDirectory =
+                Path.GetDirectoryName(
+                    currentFilePath);
+        }
+
+        // 如果是从未保存过的新项目，
+        // 并且已经设置项目名称，则使用项目名称作为默认文件名。
+        else if (!string.IsNullOrWhiteSpace(
+            currentProject.Name))
+        {
+            dialog.FileName =
+                currentProject.Name + ".cbt";
+        }
+
+        // 用户取消保存时不进行任何操作。
+        if (dialog.ShowDialog(this) !=
+            DialogResult.OK)
+        {
+            return;
+        }
+
+        // 保存成功后记录新的文件路径。
+        if (SaveProjectTo(dialog.FileName))
+        {
+            currentFilePath =
+                dialog.FileName;
+        }
+    }
+
+
+    // 将当前项目保存到指定路径。
+    // 保存成功返回 true，失败返回 false。
+    private bool SaveProjectTo(
+        string filePath)
+    {
+        try
+        {
+            // 调用项目文件服务，将 currentProject 序列化并写入文件。
+            ProjectFileService.Save(
+                filePath,
+                currentProject);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            // 文件无法写入或保存失败时显示错误信息。
+            MessageBox.Show(
+                this,
+                $"无法保存项目。\n" +
+                $"Could not save the project.\n\n" +
+                ex.Message,
+                "Conlang Builder Tool",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+
+            return false;
+        }
     }
 }
