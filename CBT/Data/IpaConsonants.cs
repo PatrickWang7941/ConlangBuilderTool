@@ -26,6 +26,7 @@ public static class IpaConsonants
     new("q", "小舌  Uvular", "塞音  Plosive", "清音  Voiceless"),
     new("ɢ", "小舌  Uvular", "塞音  Plosive", "浊音  Voiced"),
     new("ʔ", "声门  Glottal", "塞音  Plosive", "清音  Voiceless"),
+    new("ʡ", "会厌  Epiglottal", "塞音  Plosive", "清音  Voiceless"),
 
     // Affricates
     new("t͡s", "齿龈  Alveolar", "塞擦音  Affricate", "清音  Voiceless"),
@@ -59,7 +60,11 @@ public static class IpaConsonants
     new("ɾ", "齿龈  Alveolar", "闪音  Tap / Flap", "浊音  Voiced"),
     new("ɽ", "卷舌  Retroflex", "闪音  Tap / Flap", "浊音  Voiced"),
 
+    // Lateral flap
+    new("ɺ", "齿龈  Alveolar", "边闪音  Lateral flap", "浊音  Voiced"),
+
     // Fricatives
+    new("ʍ", "唇软腭  Labial-velar", "擦音  Fricative", "清音  Voiceless"),
     new("ɸ", "双唇  Bilabial", "擦音  Fricative", "清音  Voiceless"),
     new("β", "双唇  Bilabial", "擦音  Fricative", "浊音  Voiced"),
     new("f", "唇齿  Labiodental", "擦音  Fricative", "清音  Voiceless"),
@@ -70,6 +75,8 @@ public static class IpaConsonants
     new("z", "齿龈  Alveolar", "擦音  Fricative", "浊音  Voiced"),
     new("ʃ", "龈后  Postalveolar", "擦音  Fricative", "清音  Voiceless"),
     new("ʒ", "龈后  Postalveolar", "擦音  Fricative", "浊音  Voiced"),
+    new("ɕ", "龈腭  Alveolo-palatal", "擦音  Fricative", "清音  Voiceless"),
+    new("ʑ", "龈腭  Alveolo-palatal", "擦音  Fricative", "浊音  Voiced"),
     new("ʂ", "卷舌  Retroflex", "擦音  Fricative", "清音  Voiceless"),
     new("ʐ", "卷舌  Retroflex", "擦音  Fricative", "浊音  Voiced"),
     new("ç", "硬腭  Palatal", "擦音  Fricative", "清音  Voiceless"),
@@ -80,6 +87,8 @@ public static class IpaConsonants
     new("ʁ", "小舌  Uvular", "擦音  Fricative", "浊音  Voiced"),
     new("ħ", "咽  Pharyngeal", "擦音  Fricative", "清音  Voiceless"),
     new("ʕ", "咽  Pharyngeal", "擦音  Fricative", "浊音  Voiced"),
+    new("ʜ", "会厌  Epiglottal", "擦音  Fricative", "清音  Voiceless"),
+    new("ʢ", "会厌  Epiglottal", "擦音  Fricative", "浊音  Voiced"),
     new("h", "声门  Glottal", "擦音  Fricative", "清音  Voiceless"),
     new("ɦ", "声门  Glottal", "擦音  Fricative", "浊音  Voiced"),
 
@@ -92,6 +101,7 @@ public static class IpaConsonants
     new("ɹ", "齿龈  Alveolar", "近音  Approximant", "浊音  Voiced"),
     new("ɻ", "卷舌  Retroflex", "近音  Approximant", "浊音  Voiced"),
     new("j", "硬腭  Palatal", "近音  Approximant", "浊音  Voiced"),
+    new("ɥ", "唇硬腭  Labial-palatal", "近音  Approximant", "浊音  Voiced"),
     new("ɰ", "软腭  Velar", "近音  Approximant", "浊音  Voiced"),
     new("w", "唇软腭  Labial-velar", "近音  Approximant", "浊音  Voiced"),
 

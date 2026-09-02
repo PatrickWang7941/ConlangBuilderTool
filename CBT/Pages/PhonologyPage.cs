@@ -454,9 +454,11 @@ public class PhonologyPage : UserControl
             "龈腭  Alveolo-palatal",
             "卷舌  Retroflex",
             "硬腭  Palatal",
+            "唇硬腭  Labial-palatal",
             "软腭  Velar",
             "小舌  Uvular",
             "咽  Pharyngeal",
+            "会厌  Epiglottal",
             "声门  Glottal",
             "唇软腭  Labial-velar"
         });
@@ -473,6 +475,7 @@ public class PhonologyPage : UserControl
             "鼻音  Nasal",
             "颤音  Trill",
             "闪音  Tap / Flap",
+            "边闪音  Lateral flap",
             "擦音  Fricative",
             "边擦音  Lateral fricative",
             "近音  Approximant",
@@ -626,9 +629,11 @@ public class PhonologyPage : UserControl
             "龈腭\nAlveolo-palatal",
             "卷舌\nRetroflex",
             "硬腭\nPalatal",
+            "唇硬腭\nLabial-palatal",
             "软腭\nVelar",
             "小舌\nUvular",
             "咽\nPharyngeal",
+            "会厌\nEpiglottal",
             "声门\nGlottal",
             "唇软腭\nLabial-velar"
         };
@@ -643,9 +648,11 @@ public class PhonologyPage : UserControl
             "龈腭  Alveolo-palatal",
             "卷舌  Retroflex",
             "硬腭  Palatal",
+            "唇硬腭  Labial-palatal",
             "软腭  Velar",
             "小舌  Uvular",
             "咽  Pharyngeal",
+            "会厌  Epiglottal",
             "声门  Glottal",
             "唇软腭  Labial-velar"
         };
@@ -657,6 +664,7 @@ public class PhonologyPage : UserControl
             "鼻音\nNasal",
             "颤音\nTrill",
             "闪音\nTap / Flap",
+            "边闪音\nLateral flap",
             "擦音\nFricative",
             "边擦音\nLateral fricative",
             "近音\nApproximant",
@@ -670,6 +678,7 @@ public class PhonologyPage : UserControl
             "鼻音  Nasal",
             "颤音  Trill",
             "闪音  Tap / Flap",
+            "边闪音  Lateral flap",
             "擦音  Fricative",
             "边擦音  Lateral fricative",
             "近音  Approximant",
@@ -1820,6 +1829,7 @@ public class PhonologyPage : UserControl
             "鼻音  Nasal" => "鼻音  Nasals",
             "颤音  Trill" => "颤音  Trills",
             "闪音  Tap / Flap" => "闪音  Taps / Flaps",
+            "边闪音  Lateral flap" => "边闪音  Lateral flaps",
             "擦音  Fricative" => "擦音  Fricatives",
             "边擦音  Lateral fricative" => "边擦音  Lateral fricatives",
             "近音  Approximant" => "近音  Approximants",
