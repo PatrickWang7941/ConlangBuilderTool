@@ -2,27 +2,11 @@
 using CBT.Models;
 
 namespace CBT.Pages;
+
 //————————————————————以下代码由AI辅助整理为更整洁的布局，包括统一换行和修改注释格式，以便以后的修改。——————————————————————
 public class PhonologyPage : UserControl
 {
-    // 音素输入与操作控件
-    private readonly TextBox phonemeInput = new();
-    private readonly ComboBox phonemeType = new();
     private readonly Button addPhonemeButton = new();
-    private readonly Button removePhonemeButton = new();
-    private readonly Label noMatchingPhonemeLabel = new();
-
-    // IPA 选择控件
-    private readonly Button selectionModeButton = new();
-    private readonly ComboBox ipaSymbolPicker = new();
-    private readonly ComboBox ipaCategory = new();
-    private readonly ComboBox ipaChoice = new();
-
-    // 辅音控件
-    private readonly ComboBox consonantPlace = new();
-    private readonly ComboBox consonantManner = new();
-    private readonly ComboBox consonantVoicing = new();
-    private readonly ListBox consonantList = new();
 
     // 普通辅音表
     private readonly TableLayoutPanel consonantChart = new();
@@ -30,6 +14,17 @@ public class PhonologyPage : UserControl
     private readonly Dictionary<
         (string Place, string Manner, string Voicing),
         Label> consonantChartCells = new();
+
+    private readonly ListBox consonantList = new();
+    private readonly ComboBox consonantManner = new();
+
+    // 辅音控件
+    private readonly ComboBox consonantPlace = new();
+    private readonly ComboBox consonantVoicing = new();
+    private readonly ComboBox ipaCategory = new();
+    private readonly ComboBox ipaChoice = new();
+    private readonly ComboBox ipaSymbolPicker = new();
+    private readonly Label noMatchingPhonemeLabel = new();
 
     // 非肺部气流辅音表
     private readonly TableLayoutPanel nonPulmonicChart = new();
@@ -40,11 +35,19 @@ public class PhonologyPage : UserControl
     // Other IPA Symbols 显示区域
     private readonly Label otherSymbolsContent = new();
 
-    // 元音控件
-    private readonly ComboBox vowelHeight = new();
+    // 音素输入与操作控件
+    private readonly TextBox phonemeInput = new();
+    private readonly ComboBox phonemeType = new();
+
+    private readonly ConlangProject project;
+
+    // 当音系数据发生修改时通知主窗口。
+    private readonly Action? projectModified;
+    private readonly Button removePhonemeButton = new();
+
+    // IPA 选择控件
+    private readonly Button selectionModeButton = new();
     private readonly ComboBox vowelBackness = new();
-    private readonly ComboBox vowelRoundedness = new();
-    private readonly ListBox vowelList = new();
 
     // 元音图
     private readonly Panel vowelChart = new();
@@ -53,220 +56,17 @@ public class PhonologyPage : UserControl
         (string Height, string Backness, string Roundedness),
         Label> vowelChartCells = new();
 
-    private readonly ConlangProject project;
-
-    // 当音系数据发生修改时通知主窗口。
-    private readonly Action? projectModified;
-
-    private SelectionMode selectionMode =
-        SelectionMode.Detailed;
+    // 元音控件
+    private readonly ComboBox vowelHeight = new();
+    private readonly ListBox vowelList = new();
+    private readonly ComboBox vowelRoundedness = new();
 
     private bool isSynchronizingSelection;
 
     private int lastIpaSymbolIndex = -1;
 
-
-    private enum SelectionMode
-    {
-        Detailed,
-        Guided,
-        List
-    }
-
-
-    // 下拉栏中的显示项目。
-    private class IpaDisplayItem
-    {
-        public string Text { get; }
-
-        public IpaConsonant? Consonant { get; }
-
-        public IpaNonPulmonicConsonant?
-            NonPulmonicConsonant
-        { get; }
-
-        public IpaOtherSymbol?
-            OtherSymbol
-        { get; }
-
-        public IpaVowel? Vowel { get; }
-
-
-        // 分组标题。
-        public IpaDisplayItem(
-            string text)
-        {
-            Text = text;
-        }
-
-
-        // 普通辅音。
-        public IpaDisplayItem(
-            string text,
-            IpaConsonant consonant)
-        {
-            Text = text;
-            Consonant = consonant;
-        }
-
-
-        // 非肺部气流辅音。
-        public IpaDisplayItem(
-            string text,
-            IpaNonPulmonicConsonant consonant)
-        {
-            Text = text;
-            NonPulmonicConsonant = consonant;
-        }
-
-
-        // Other IPA Symbol。
-        public IpaDisplayItem(
-            string text,
-            IpaOtherSymbol symbol)
-        {
-            Text = text;
-            OtherSymbol = symbol;
-        }
-
-
-        // 元音。
-        public IpaDisplayItem(
-            string text,
-            IpaVowel vowel)
-        {
-            Text = text;
-            Vowel = vowel;
-        }
-
-
-        public override string ToString()
-        {
-            return Text;
-        }
-    }
-
-
-    private class IpaCategoryItem
-    {
-        public string Manner { get; }
-
-        public string Text { get; }
-
-
-        public IpaCategoryItem(
-            string manner,
-            string text)
-        {
-            Manner = manner;
-            Text = text;
-        }
-
-
-        public override string ToString()
-        {
-            return Text;
-        }
-    }
-
-
-    private class IpaVowelCategoryItem
-    {
-        public string Height { get; }
-
-        public string Text { get; }
-
-
-        public IpaVowelCategoryItem(
-            string height,
-            string text)
-        {
-            Height = height;
-            Text = text;
-        }
-
-
-        public override string ToString()
-        {
-            return Text;
-        }
-    }
-
-
-    // 项目辅音在左侧清单中的显示形式。
-    private class ConsonantEntry
-    {
-        public string Symbol { get; set; } = "";
-
-        public string Place { get; set; } = "";
-
-        public string Manner { get; set; } = "";
-
-        public string Voicing { get; set; } = "";
-
-        public string Category { get; set; } = "";
-
-        public string Description { get; set; } = "";
-
-
-        public override string ToString()
-        {
-            // 非肺部辅音和 Other Symbols
-            // 使用 Description 显示。
-            if (!string.IsNullOrWhiteSpace(
-                Description))
-            {
-                return
-                    $"{Symbol}    " +
-                    $"{GetChinesePart(Description)}";
-            }
-
-            string place =
-                Place.Split("  ")[0];
-
-            string manner =
-                Manner.Split("  ")[0];
-
-            string voicing =
-                Voicing.StartsWith("清音")
-                    ? "清"
-                    : "浊";
-
-            return
-                $"{Symbol}    " +
-                $"{place}{voicing}{manner}";
-        }
-    }
-
-
-    // 项目元音在清单中的显示形式。
-    private class VowelEntry
-    {
-        public string Symbol { get; set; } = "";
-
-        public string Height { get; set; } = "";
-
-        public string Backness { get; set; } = "";
-
-        public string Roundedness { get; set; } = "";
-
-
-        public override string ToString()
-        {
-            string height =
-                GetChinesePart(Height);
-
-            string backness =
-                GetChinesePart(Backness);
-
-            string roundedness =
-                GetChinesePart(Roundedness);
-
-            return
-                $"{Symbol}    " +
-                $"{roundedness}{backness}{height}";
-        }
-    }
+    private SelectionMode selectionMode =
+        SelectionMode.Detailed;
 
 
     public PhonologyPage()
@@ -679,9 +479,7 @@ public class PhonologyPage : UserControl
                     isSynchronizingSelection ||
                     ipaSymbolPicker.SelectedItem
                         is not IpaDisplayItem selectedItem)
-                {
                     return;
-                }
 
 
                 // 分组标题不能作为音素选择。
@@ -740,10 +538,8 @@ public class PhonologyPage : UserControl
 
                 if (
                     selectedItem.Vowel != null)
-                {
                     ApplyVowel(
                         selectedItem.Vowel);
-                }
             };
     }
 
@@ -834,14 +630,12 @@ public class PhonologyPage : UserControl
             {
                 if (
                     isSynchronizingSelection)
-                {
                     return;
-                }
 
 
                 if (
                     ipaCategory.SelectedItem
-                        is IpaCategoryItem consonantCategory)
+                    is IpaCategoryItem consonantCategory)
                 {
                     PopulateGuidedChoices(
                         consonantCategory.Manner);
@@ -852,11 +646,9 @@ public class PhonologyPage : UserControl
 
                 if (
                     ipaCategory.SelectedItem
-                        is IpaVowelCategoryItem vowelCategory)
-                {
+                    is IpaVowelCategoryItem vowelCategory)
                     PopulateGuidedVowelChoices(
                         vowelCategory.Height);
-                }
             };
 
 
@@ -867,9 +659,7 @@ public class PhonologyPage : UserControl
                     isSynchronizingSelection ||
                     ipaChoice.SelectedItem
                         is not IpaDisplayItem selectedItem)
-                {
                     return;
-                }
 
 
                 if (
@@ -884,35 +674,17 @@ public class PhonologyPage : UserControl
 
                 if (
                     selectedItem.Vowel != null)
-                {
                     ApplyVowel(
                         selectedItem.Vowel);
-                }
             };
     }
 
 
     private void ConfigureConsonantFeatureSelectors()
     {
-        consonantPlace.Items.AddRange(
-            new object[]
-            {
-                "双唇  Bilabial",
-                "唇齿  Labiodental",
-                "齿  Dental",
-                "齿龈  Alveolar",
-                "龈后  Postalveolar",
-                "龈腭  Alveolo-palatal",
-                "卷舌  Retroflex",
-                "硬腭  Palatal",
-                "唇硬腭  Labial-palatal",
-                "软腭  Velar",
-                "小舌  Uvular",
-                "咽  Pharyngeal",
-                "会厌  Epiglottal",
-                "声门  Glottal",
-                "唇软腭  Labial-velar"
-            });
+        consonantPlace.Items.AddRange("双唇  Bilabial", "唇齿  Labiodental", "齿  Dental", "齿龈  Alveolar",
+            "龈后  Postalveolar", "龈腭  Alveolo-palatal", "卷舌  Retroflex", "硬腭  Palatal", "唇硬腭  Labial-palatal",
+            "软腭  Velar", "小舌  Uvular", "咽  Pharyngeal", "会厌  Epiglottal", "声门  Glottal", "唇软腭  Labial-velar");
 
 
         consonantPlace.DropDownStyle =
@@ -937,20 +709,8 @@ public class PhonologyPage : UserControl
                 0);
 
 
-        consonantManner.Items.AddRange(
-            new object[]
-            {
-                "塞音  Plosive",
-                "鼻音  Nasal",
-                "颤音  Trill",
-                "闪音  Tap / Flap",
-                "边闪音  Lateral flap",
-                "擦音  Fricative",
-                "边擦音  Lateral fricative",
-                "近音  Approximant",
-                "边近音  Lateral approximant",
-                "塞擦音  Affricate"
-            });
+        consonantManner.Items.AddRange("塞音  Plosive", "鼻音  Nasal", "颤音  Trill", "闪音  Tap / Flap", "边闪音  Lateral flap",
+            "擦音  Fricative", "边擦音  Lateral fricative", "近音  Approximant", "边近音  Lateral approximant", "塞擦音  Affricate");
 
 
         consonantManner.DropDownStyle =
@@ -975,12 +735,7 @@ public class PhonologyPage : UserControl
                 0);
 
 
-        consonantVoicing.Items.AddRange(
-            new object[]
-            {
-                "清音  Voiceless",
-                "浊音  Voiced"
-            });
+        consonantVoicing.Items.AddRange("清音  Voiceless", "浊音  Voiced");
 
 
         consonantPlace.SelectedIndexChanged +=
@@ -1021,17 +776,8 @@ public class PhonologyPage : UserControl
 
     private void ConfigureVowelFeatureSelectors()
     {
-        vowelHeight.Items.AddRange(
-            new object[]
-            {
-                "闭  Close",
-                "近闭  Near-close",
-                "半闭  Close-mid",
-                "中  Mid",
-                "半开  Open-mid",
-                "近开  Near-open",
-                "开  Open"
-            });
+        vowelHeight.Items.AddRange("闭  Close", "近闭  Near-close", "半闭  Close-mid", "中  Mid", "半开  Open-mid",
+            "近开  Near-open", "开  Open");
 
 
         vowelHeight.DropDownStyle =
@@ -1056,13 +802,7 @@ public class PhonologyPage : UserControl
                 0);
 
 
-        vowelBackness.Items.AddRange(
-            new object[]
-            {
-                "前  Front",
-                "央  Central",
-                "后  Back"
-            });
+        vowelBackness.Items.AddRange("前  Front", "央  Central", "后  Back");
 
 
         vowelBackness.DropDownStyle =
@@ -1087,12 +827,7 @@ public class PhonologyPage : UserControl
                 0);
 
 
-        vowelRoundedness.Items.AddRange(
-            new object[]
-            {
-                "不圆唇  Unrounded",
-                "圆唇  Rounded"
-            });
+        vowelRoundedness.Items.AddRange("不圆唇  Unrounded", "圆唇  Rounded");
 
 
         vowelRoundedness.DropDownStyle =
@@ -1234,8 +969,8 @@ public class PhonologyPage : UserControl
         // 记录上一次真正完成点击选择的项目。
         // 不再使用 MouseDown 时的 SelectedIndex，
         // 因为 WinForms 可能已经在 MouseDown 前更新了选择。
-        int lastConsonantClickedIndex = -1;
-        int lastVowelClickedIndex = -1;
+        var lastConsonantClickedIndex = -1;
+        var lastVowelClickedIndex = -1;
 
 
         // 如果选择通过键盘、删除或其他方式发生改变，
@@ -1245,9 +980,7 @@ public class PhonologyPage : UserControl
             {
                 if (consonantList.SelectedIndex !=
                     lastConsonantClickedIndex)
-                {
                     lastConsonantClickedIndex = -1;
-                }
             };
 
 
@@ -1256,21 +989,16 @@ public class PhonologyPage : UserControl
             {
                 if (vowelList.SelectedIndex !=
                     lastVowelClickedIndex)
-                {
                     lastVowelClickedIndex = -1;
-                }
             };
 
 
         consonantList.MouseClick +=
             (sender, e) =>
             {
-                if (e.Button != MouseButtons.Left)
-                {
-                    return;
-                }
+                if (e.Button != MouseButtons.Left) return;
 
-                int clickedIndex =
+                var clickedIndex =
                     consonantList.IndexFromPoint(
                         e.Location);
 
@@ -1288,9 +1016,9 @@ public class PhonologyPage : UserControl
                 // 再次点击当前已经选中的同一个辅音：
                 // 取消选择。
                 if (clickedIndex ==
-                        lastConsonantClickedIndex &&
+                    lastConsonantClickedIndex &&
                     consonantList.SelectedIndex ==
-                        clickedIndex)
+                    clickedIndex)
                 {
                     consonantList.ClearSelected();
                     lastConsonantClickedIndex = -1;
@@ -1316,12 +1044,9 @@ public class PhonologyPage : UserControl
         vowelList.MouseClick +=
             (sender, e) =>
             {
-                if (e.Button != MouseButtons.Left)
-                {
-                    return;
-                }
+                if (e.Button != MouseButtons.Left) return;
 
-                int clickedIndex =
+                var clickedIndex =
                     vowelList.IndexFromPoint(
                         e.Location);
 
@@ -1337,9 +1062,9 @@ public class PhonologyPage : UserControl
                 // 再次点击当前已经选中的同一个元音：
                 // 取消选择。
                 if (clickedIndex ==
-                        lastVowelClickedIndex &&
+                    lastVowelClickedIndex &&
                     vowelList.SelectedIndex ==
-                        clickedIndex)
+                    clickedIndex)
                 {
                     vowelList.ClearSelected();
                     lastVowelClickedIndex = -1;
@@ -1510,14 +1235,12 @@ public class PhonologyPage : UserControl
 
 
         foreach (
-            string place
+            var place
             in places)
-        {
             consonantChart.ColumnStyles.Add(
                 new ColumnStyle(
                     SizeType.Absolute,
                     100));
-        }
 
 
         consonantChart.RowStyles.Add(
@@ -1527,7 +1250,7 @@ public class PhonologyPage : UserControl
 
 
         for (
-            int column = 0;
+            var column = 0;
             column < places.Length;
             column++)
         {
@@ -1557,7 +1280,7 @@ public class PhonologyPage : UserControl
 
 
         for (
-            int row = 0;
+            var row = 0;
             row < manners.Length;
             row++)
         {
@@ -1593,7 +1316,7 @@ public class PhonologyPage : UserControl
 
 
             for (
-                int column = 0;
+                var column = 0;
                 column < places.Length;
                 column++)
             {
@@ -1747,14 +1470,14 @@ public class PhonologyPage : UserControl
                 430));
 
 
-        Control vowelArea =
+        var vowelArea =
             BuildVowelChart();
 
         vowelArea.Margin =
             new Padding(0);
 
 
-        Control nonPulmonicArea =
+        var nonPulmonicArea =
             BuildNonPulmonicChart();
 
         nonPulmonicArea.Margin =
@@ -1899,11 +1622,11 @@ public class PhonologyPage : UserControl
 
 
         for (
-            int column = 0;
+            var column = 0;
             column < categoryKeys.Length;
             column++)
         {
-            string categoryKey =
+            var categoryKey =
                 categoryKeys[column];
 
 
@@ -1966,7 +1689,7 @@ public class PhonologyPage : UserControl
 
 
             nonPulmonicChartCells[
-                categoryKey] =
+                    categoryKey] =
                 content;
         }
 
@@ -2117,7 +1840,6 @@ public class PhonologyPage : UserControl
                     new Point(
                         490,
                         55),
-
                     new Point(
                         550,
                         340));
@@ -2173,26 +1895,23 @@ public class PhonologyPage : UserControl
 
 
         foreach (
-            IpaVowel vowel
+            var vowel
             in IpaVowels.All)
         {
-            Point anchor =
+            var anchor =
                 GetVowelChartPosition(
                     vowel.Height,
                     vowel.Backness);
 
 
-            bool hasRoundedPair =
-                IpaVowels.All.Any(
-                    x =>
-                        x.Height ==
-                            vowel.Height &&
-
-                        x.Backness ==
-                            vowel.Backness &&
-
-                        x.Roundedness !=
-                            vowel.Roundedness);
+            var hasRoundedPair =
+                IpaVowels.All.Any(x =>
+                    x.Height ==
+                    vowel.Height &&
+                    x.Backness ==
+                    vowel.Backness &&
+                    x.Roundedness !=
+                    vowel.Roundedness);
 
 
             int x;
@@ -2200,22 +1919,16 @@ public class PhonologyPage : UserControl
 
             if (
                 !hasRoundedPair)
-            {
                 x =
                     anchor.X - 20;
-            }
             else if (
                 vowel.Roundedness.StartsWith(
                     "不圆唇"))
-            {
                 x =
                     anchor.X - 42;
-            }
             else
-            {
                 x =
                     anchor.X + 2;
-            }
 
 
             Label cell =
@@ -2333,46 +2046,38 @@ public class PhonologyPage : UserControl
     private void RefreshVowelChart()
     {
         foreach (
-            Label cell
+            var cell
             in vowelChartCells.Values)
-        {
             cell.Text =
                 "";
-        }
 
 
         foreach (
-            VowelPhoneme vowel
+            var vowel
             in project.Phonology.Vowels)
         {
             var key =
-                (
-                    vowel.Height,
-                    vowel.Backness,
-                    vowel.Roundedness
-                );
+            (
+                vowel.Height,
+                vowel.Backness,
+                vowel.Roundedness
+            );
 
 
             if (
                 !vowelChartCells.TryGetValue(
                     key,
-                    out Label? cell))
-            {
+                    out var cell))
                 continue;
-            }
 
 
             if (
                 cell.Text.Length == 0)
-            {
                 cell.Text =
                     vowel.Symbol;
-            }
             else
-            {
                 cell.Text +=
                     $" {vowel.Symbol}";
-            }
         }
     }
 
@@ -2381,7 +2086,7 @@ public class PhonologyPage : UserControl
         string height,
         string backness)
     {
-        int row =
+        var row =
             height switch
             {
                 "闭  Close" =>
@@ -2410,26 +2115,26 @@ public class PhonologyPage : UserControl
             };
 
 
-        int y =
+        var y =
             55 +
             row * 45;
 
 
-        int frontX =
+        var frontX =
             250 +
             row * 20;
 
 
-        int backX =
+        var backX =
             730;
 
 
-        int centralX =
+        var centralX =
             (frontX + backX) /
             2;
 
 
-        int x =
+        var x =
             backness switch
             {
                 "前  Front" =>
@@ -2456,26 +2161,26 @@ public class PhonologyPage : UserControl
     // 根据音素类型和选择模式更新 UI。
     private void UpdateSelectionMode()
     {
-        bool isConsonant =
+        var isConsonant =
             phonemeType.SelectedIndex == 0;
 
-        bool isVowel =
+        var isVowel =
             phonemeType.SelectedIndex == 1;
 
 
-        IpaConsonant? currentConsonant =
+        var currentConsonant =
             FindConsonantFromInput();
 
 
-        bool detailedMode =
+        var detailedMode =
             selectionMode ==
             SelectionMode.Detailed;
 
-        bool guidedMode =
+        var guidedMode =
             selectionMode ==
             SelectionMode.Guided;
 
-        bool listMode =
+        var listMode =
             selectionMode ==
             SelectionMode.List;
 
@@ -2540,10 +2245,8 @@ public class PhonologyPage : UserControl
             {
                 if (
                     currentConsonant != null)
-                {
                     SelectDetailedConsonant(
                         currentConsonant);
-                }
             }
             else
             {
@@ -2565,24 +2268,20 @@ public class PhonologyPage : UserControl
 
                 if (
                     currentConsonant != null)
-                {
                     SelectDetailedConsonant(
                         currentConsonant);
-                }
             }
             else
             {
                 LoadVowelListPicker();
 
-                IpaVowel? currentVowel =
+                var currentVowel =
                     FindVowelFromInput();
 
                 if (
                     currentVowel != null)
-                {
                     SelectListVowel(
                         currentVowel);
-                }
             }
 
             return;
@@ -2604,10 +2303,8 @@ public class PhonologyPage : UserControl
 
             if (
                 currentConsonant != null)
-            {
                 SelectGuidedConsonant(
                     currentConsonant);
-            }
         }
         else
         {
@@ -2621,20 +2318,16 @@ public class PhonologyPage : UserControl
             LoadVowelCategories();
 
 
-            IpaVowel? currentVowel =
+            var currentVowel =
                 FindVowelFromInput();
 
 
             if (
                 currentVowel != null)
-            {
                 SelectGuidedVowel(
                     currentVowel);
-            }
             else
-            {
                 UpdateVowelSymbolFromFeatures();
-            }
         }
     }
 
@@ -2649,9 +2342,8 @@ public class PhonologyPage : UserControl
 
         // 普通辅音
         foreach (
-            IGrouping<string, IpaConsonant> category
-            in IpaConsonants.All.GroupBy(
-                x => x.Manner))
+            var category
+            in IpaConsonants.All.GroupBy(x => x.Manner))
         {
             ipaSymbolPicker.Items.Add(
                 new IpaDisplayItem(
@@ -2661,26 +2353,20 @@ public class PhonologyPage : UserControl
 
 
             foreach (
-                IpaConsonant consonant
+                var consonant
                 in category)
-            {
                 ipaSymbolPicker.Items.Add(
                     new IpaDisplayItem(
                         $"{consonant.Symbol}   " +
                         $"{GetConsonantDescription(consonant)}",
-
                         consonant));
-            }
         }
 
 
         // 非肺部气流辅音
         foreach (
-            IGrouping<
-                string,
-                IpaNonPulmonicConsonant> category
-            in IpaNonPulmonicConsonants.All.GroupBy(
-                x => x.Category))
+            var category
+            in IpaNonPulmonicConsonants.All.GroupBy(x => x.Category))
         {
             ipaSymbolPicker.Items.Add(
                 new IpaDisplayItem(
@@ -2688,16 +2374,13 @@ public class PhonologyPage : UserControl
 
 
             foreach (
-                IpaNonPulmonicConsonant consonant
+                var consonant
                 in category)
-            {
                 ipaSymbolPicker.Items.Add(
                     new IpaDisplayItem(
                         $"{consonant.Symbol}   " +
                         $"{consonant.Description}",
-
                         consonant));
-            }
         }
 
 
@@ -2712,16 +2395,13 @@ public class PhonologyPage : UserControl
 
 
             foreach (
-                IpaOtherSymbol symbol
+                var symbol
                 in IpaOtherSymbols.All)
-            {
                 ipaSymbolPicker.Items.Add(
                     new IpaDisplayItem(
                         $"{symbol.Symbol}   " +
                         $"{symbol.Name}",
-
                         symbol));
-            }
         }
 
 
@@ -2738,7 +2418,7 @@ public class PhonologyPage : UserControl
 
     private void LoadConsonantCategories()
     {
-        bool wasSynchronizing =
+        var wasSynchronizing =
             isSynchronizingSelection;
 
         isSynchronizingSelection =
@@ -2751,18 +2431,15 @@ public class PhonologyPage : UserControl
 
 
         foreach (
-            string manner
+            var manner
             in IpaConsonants.All
-                .Select(
-                    x => x.Manner)
+                .Select(x => x.Manner)
                 .Distinct())
-        {
             ipaCategory.Items.Add(
                 new IpaCategoryItem(
                     manner,
                     GetCategoryDisplayName(
                         manner)));
-        }
 
 
         ipaCategory.SelectedIndex =
@@ -2781,7 +2458,7 @@ public class PhonologyPage : UserControl
     private void PopulateGuidedChoices(
         string manner)
     {
-        bool wasSynchronizing =
+        var wasSynchronizing =
             isSynchronizingSelection;
 
         isSynchronizingSelection =
@@ -2794,17 +2471,13 @@ public class PhonologyPage : UserControl
 
 
         foreach (
-            IpaConsonant consonant
-            in IpaConsonants.All.Where(
-                x => x.Manner == manner))
-        {
+            var consonant
+            in IpaConsonants.All.Where(x => x.Manner == manner))
             ipaChoice.Items.Add(
                 new IpaDisplayItem(
                     $"{consonant.Symbol}   " +
                     $"{GetConsonantDescription(consonant)}",
-
                     consonant));
-        }
 
 
         ipaChoice.SelectedIndex =
@@ -2822,11 +2495,9 @@ public class PhonologyPage : UserControl
     {
         if (
             ipaCategory.Items
-                .OfType<IpaCategoryItem>()
-                .Any())
-        {
+            .OfType<IpaCategoryItem>()
+            .Any())
             return;
-        }
 
 
         LoadConsonantCategories();
@@ -2838,7 +2509,7 @@ public class PhonologyPage : UserControl
     private void ApplyConsonant(
         IpaConsonant consonant)
     {
-        bool wasSynchronizing =
+        var wasSynchronizing =
             isSynchronizingSelection;
 
         isSynchronizingSelection =
@@ -2889,7 +2560,7 @@ public class PhonologyPage : UserControl
     private void ApplyNonPulmonicConsonant(
         IpaNonPulmonicConsonant consonant)
     {
-        bool wasSynchronizing =
+        var wasSynchronizing =
             isSynchronizingSelection;
 
         isSynchronizingSelection =
@@ -2922,7 +2593,7 @@ public class PhonologyPage : UserControl
     private void ApplyOtherSymbol(
         IpaOtherSymbol symbol)
     {
-        bool wasSynchronizing =
+        var wasSynchronizing =
             isSynchronizingSelection;
 
         isSynchronizingSelection =
@@ -2954,7 +2625,7 @@ public class PhonologyPage : UserControl
     private void SelectDetailedConsonant(
         IpaConsonant consonant)
     {
-        bool wasSynchronizing =
+        var wasSynchronizing =
             isSynchronizingSelection;
 
         isSynchronizingSelection =
@@ -2962,16 +2633,14 @@ public class PhonologyPage : UserControl
 
 
         for (
-            int index = 0;
+            var index = 0;
             index < ipaSymbolPicker.Items.Count;
             index++)
-        {
             if (
                 ipaSymbolPicker.Items[index]
                     is IpaDisplayItem item &&
-
                 item.Consonant?.Symbol ==
-                    consonant.Symbol)
+                consonant.Symbol)
             {
                 ipaSymbolPicker.SelectedIndex =
                     index;
@@ -2981,7 +2650,6 @@ public class PhonologyPage : UserControl
 
                 break;
             }
-        }
 
 
         isSynchronizingSelection =
@@ -2992,7 +2660,7 @@ public class PhonologyPage : UserControl
     private void SelectGuidedConsonant(
         IpaConsonant consonant)
     {
-        bool wasSynchronizing =
+        var wasSynchronizing =
             isSynchronizingSelection;
 
         isSynchronizingSelection =
@@ -3003,23 +2671,20 @@ public class PhonologyPage : UserControl
 
 
         for (
-            int index = 0;
+            var index = 0;
             index < ipaCategory.Items.Count;
             index++)
-        {
             if (
                 ipaCategory.Items[index]
                     is IpaCategoryItem category &&
-
                 category.Manner ==
-                    consonant.Manner)
+                consonant.Manner)
             {
                 ipaCategory.SelectedIndex =
                     index;
 
                 break;
             }
-        }
 
 
         PopulateGuidedChoices(
@@ -3027,23 +2692,20 @@ public class PhonologyPage : UserControl
 
 
         for (
-            int index = 0;
+            var index = 0;
             index < ipaChoice.Items.Count;
             index++)
-        {
             if (
                 ipaChoice.Items[index]
                     is IpaDisplayItem item &&
-
                 item.Consonant?.Symbol ==
-                    consonant.Symbol)
+                consonant.Symbol)
             {
                 ipaChoice.SelectedIndex =
                     index;
 
                 break;
             }
-        }
 
 
         isSynchronizingSelection =
@@ -3054,42 +2716,39 @@ public class PhonologyPage : UserControl
     private IpaConsonant?
         FindConsonantFromInput()
     {
-        string symbol =
+        var symbol =
             NormalizeInputSymbol(
                 phonemeInput.Text.Trim());
 
 
         return
-            IpaConsonants.All.FirstOrDefault(
-                x => x.Symbol == symbol);
+            IpaConsonants.All.FirstOrDefault(x => x.Symbol == symbol);
     }
 
 
     private IpaNonPulmonicConsonant?
         FindNonPulmonicConsonantFromInput()
     {
-        string symbol =
+        var symbol =
             phonemeInput.Text.Trim();
 
 
         return
             IpaNonPulmonicConsonants.All
-                .FirstOrDefault(
-                    x => x.Symbol == symbol);
+                .FirstOrDefault(x => x.Symbol == symbol);
     }
 
 
     private IpaOtherSymbol?
         FindOtherSymbolFromInput()
     {
-        string symbol =
+        var symbol =
             phonemeInput.Text.Trim();
 
 
         return
             IpaOtherSymbols.All
-                .FirstOrDefault(
-                    x => x.Symbol == symbol);
+                .FirstOrDefault(x => x.Symbol == symbol);
     }
 
 
@@ -3108,28 +2767,23 @@ public class PhonologyPage : UserControl
         if (
             isSynchronizingSelection ||
             phonemeType.SelectedIndex != 0)
-        {
             return;
-        }
 
 
-        IpaConsonant? match =
-            IpaConsonants.All.FirstOrDefault(
-                x =>
-                    x.Place ==
-                        consonantPlace.Text &&
-
-                    x.Manner ==
-                        consonantManner.Text &&
-
-                    x.Voicing ==
-                        consonantVoicing.Text);
+        var match =
+            IpaConsonants.All.FirstOrDefault(x =>
+                x.Place ==
+                consonantPlace.Text &&
+                x.Manner ==
+                consonantManner.Text &&
+                x.Voicing ==
+                consonantVoicing.Text);
 
 
         if (
             match == null)
         {
-            bool wasSynchronizing =
+            var wasSynchronizing =
                 isSynchronizingSelection;
 
             isSynchronizingSelection =
@@ -3170,7 +2824,7 @@ public class PhonologyPage : UserControl
 
     private void LoadVowelListPicker()
     {
-        bool wasSynchronizing =
+        var wasSynchronizing =
             isSynchronizingSelection;
 
         isSynchronizingSelection =
@@ -3183,9 +2837,8 @@ public class PhonologyPage : UserControl
 
 
         foreach (
-            IGrouping<string, IpaVowel> category
-            in IpaVowels.All.GroupBy(
-                x => x.Height))
+            var category
+            in IpaVowels.All.GroupBy(x => x.Height))
         {
             ipaSymbolPicker.Items.Add(
                 new IpaDisplayItem(
@@ -3195,16 +2848,13 @@ public class PhonologyPage : UserControl
 
 
             foreach (
-                IpaVowel vowel
+                var vowel
                 in category)
-            {
                 ipaSymbolPicker.Items.Add(
                     new IpaDisplayItem(
                         $"{vowel.Symbol}   " +
                         $"{GetVowelDescription(vowel)}",
-
                         vowel));
-            }
         }
 
 
@@ -3225,7 +2875,7 @@ public class PhonologyPage : UserControl
 
     private void LoadVowelCategories()
     {
-        bool wasSynchronizing =
+        var wasSynchronizing =
             isSynchronizingSelection;
 
         isSynchronizingSelection =
@@ -3238,18 +2888,15 @@ public class PhonologyPage : UserControl
 
 
         foreach (
-            string height
+            var height
             in IpaVowels.All
-                .Select(
-                    x => x.Height)
+                .Select(x => x.Height)
                 .Distinct())
-        {
             ipaCategory.Items.Add(
                 new IpaVowelCategoryItem(
                     height,
                     GetVowelCategoryDisplayName(
                         height)));
-        }
 
 
         ipaCategory.SelectedIndex =
@@ -3268,7 +2915,7 @@ public class PhonologyPage : UserControl
     private void PopulateGuidedVowelChoices(
         string height)
     {
-        bool wasSynchronizing =
+        var wasSynchronizing =
             isSynchronizingSelection;
 
         isSynchronizingSelection =
@@ -3281,17 +2928,13 @@ public class PhonologyPage : UserControl
 
 
         foreach (
-            IpaVowel vowel
-            in IpaVowels.All.Where(
-                x => x.Height == height))
-        {
+            var vowel
+            in IpaVowels.All.Where(x => x.Height == height))
             ipaChoice.Items.Add(
                 new IpaDisplayItem(
                     $"{vowel.Symbol}   " +
                     $"{GetVowelDescription(vowel)}",
-
                     vowel));
-        }
 
 
         ipaChoice.SelectedIndex =
@@ -3310,7 +2953,7 @@ public class PhonologyPage : UserControl
     private void ApplyVowel(
         IpaVowel vowel)
     {
-        bool wasSynchronizing =
+        var wasSynchronizing =
             isSynchronizingSelection;
 
         isSynchronizingSelection =
@@ -3360,7 +3003,7 @@ public class PhonologyPage : UserControl
     private void SelectListVowel(
         IpaVowel vowel)
     {
-        bool wasSynchronizing =
+        var wasSynchronizing =
             isSynchronizingSelection;
 
         isSynchronizingSelection =
@@ -3368,16 +3011,14 @@ public class PhonologyPage : UserControl
 
 
         for (
-            int index = 0;
+            var index = 0;
             index < ipaSymbolPicker.Items.Count;
             index++)
-        {
             if (
                 ipaSymbolPicker.Items[index]
                     is IpaDisplayItem item &&
-
                 item.Vowel?.Symbol ==
-                    vowel.Symbol)
+                vowel.Symbol)
             {
                 ipaSymbolPicker.SelectedIndex =
                     index;
@@ -3387,7 +3028,6 @@ public class PhonologyPage : UserControl
 
                 break;
             }
-        }
 
 
         isSynchronizingSelection =
@@ -3398,7 +3038,7 @@ public class PhonologyPage : UserControl
     private void SelectGuidedVowel(
         IpaVowel vowel)
     {
-        bool wasSynchronizing =
+        var wasSynchronizing =
             isSynchronizingSelection;
 
         isSynchronizingSelection =
@@ -3409,29 +3049,24 @@ public class PhonologyPage : UserControl
             !ipaCategory.Items
                 .OfType<IpaVowelCategoryItem>()
                 .Any())
-        {
             LoadVowelCategories();
-        }
 
 
         for (
-            int index = 0;
+            var index = 0;
             index < ipaCategory.Items.Count;
             index++)
-        {
             if (
                 ipaCategory.Items[index]
                     is IpaVowelCategoryItem category &&
-
                 category.Height ==
-                    vowel.Height)
+                vowel.Height)
             {
                 ipaCategory.SelectedIndex =
                     index;
 
                 break;
             }
-        }
 
 
         PopulateGuidedVowelChoices(
@@ -3439,23 +3074,20 @@ public class PhonologyPage : UserControl
 
 
         for (
-            int index = 0;
+            var index = 0;
             index < ipaChoice.Items.Count;
             index++)
-        {
             if (
                 ipaChoice.Items[index]
                     is IpaDisplayItem item &&
-
                 item.Vowel?.Symbol ==
-                    vowel.Symbol)
+                vowel.Symbol)
             {
                 ipaChoice.SelectedIndex =
                     index;
 
                 break;
             }
-        }
 
 
         isSynchronizingSelection =
@@ -3466,13 +3098,12 @@ public class PhonologyPage : UserControl
     private IpaVowel?
         FindVowelFromInput()
     {
-        string symbol =
+        var symbol =
             phonemeInput.Text.Trim();
 
 
         return
-            IpaVowels.All.FirstOrDefault(
-                x => x.Symbol == symbol);
+            IpaVowels.All.FirstOrDefault(x => x.Symbol == symbol);
     }
 
 
@@ -3481,28 +3112,23 @@ public class PhonologyPage : UserControl
         if (
             isSynchronizingSelection ||
             phonemeType.SelectedIndex != 1)
-        {
             return;
-        }
 
 
-        IpaVowel? match =
-            IpaVowels.All.FirstOrDefault(
-                x =>
-                    x.Height ==
-                        vowelHeight.Text &&
-
-                    x.Backness ==
-                        vowelBackness.Text &&
-
-                    x.Roundedness ==
-                        vowelRoundedness.Text);
+        var match =
+            IpaVowels.All.FirstOrDefault(x =>
+                x.Height ==
+                vowelHeight.Text &&
+                x.Backness ==
+                vowelBackness.Text &&
+                x.Roundedness ==
+                vowelRoundedness.Text);
 
 
         if (
             match == null)
         {
-            bool wasSynchronizing =
+            var wasSynchronizing =
                 isSynchronizingSelection;
 
             isSynchronizingSelection =
@@ -3543,12 +3169,10 @@ public class PhonologyPage : UserControl
     {
         if (
             isSynchronizingSelection)
-        {
             return;
-        }
 
 
-        string input =
+        var input =
             phonemeInput.Text.Trim();
 
 
@@ -3573,7 +3197,7 @@ public class PhonologyPage : UserControl
             phonemeType.SelectedIndex == 0)
         {
             // 普通辅音
-            IpaConsonant? consonant =
+            var consonant =
                 FindConsonantFromInput();
 
 
@@ -3595,7 +3219,7 @@ public class PhonologyPage : UserControl
 
 
             // Non-pulmonic
-            IpaNonPulmonicConsonant?
+            var
                 nonPulmonic =
                     FindNonPulmonicConsonantFromInput();
 
@@ -3617,7 +3241,7 @@ public class PhonologyPage : UserControl
 
 
             // Other IPA Symbols
-            IpaOtherSymbol?
+            var
                 otherSymbol =
                     FindOtherSymbolFromInput();
 
@@ -3653,7 +3277,7 @@ public class PhonologyPage : UserControl
 
 
         // 元音
-        IpaVowel? vowel =
+        var vowel =
             FindVowelFromInput();
 
 
@@ -3687,7 +3311,7 @@ public class PhonologyPage : UserControl
 
     private void ClearIpaSelections()
     {
-        bool wasSynchronizing =
+        var wasSynchronizing =
             isSynchronizingSelection;
 
         isSynchronizingSelection =
@@ -3718,9 +3342,8 @@ public class PhonologyPage : UserControl
 
 
         foreach (
-            ConsonantPhoneme consonant
+            var consonant
             in project.Phonology.Consonants)
-        {
             consonantList.Items.Add(
                 new ConsonantEntry
                 {
@@ -3742,13 +3365,11 @@ public class PhonologyPage : UserControl
                     Description =
                         consonant.Description
                 });
-        }
 
 
         foreach (
-            VowelPhoneme vowel
+            var vowel
             in project.Phonology.Vowels)
-        {
             vowelList.Items.Add(
                 new VowelEntry
                 {
@@ -3764,7 +3385,6 @@ public class PhonologyPage : UserControl
                     Roundedness =
                         vowel.Roundedness
                 });
-        }
 
 
         RefreshConsonantChart();
@@ -3782,15 +3402,13 @@ public class PhonologyPage : UserControl
         object? sender,
         EventArgs e)
     {
-        string phoneme =
+        var phoneme =
             phonemeInput.Text.Trim();
 
 
         if (
             phoneme.Length == 0)
-        {
             return;
-        }
 
 
         // 辅音
@@ -3804,17 +3422,13 @@ public class PhonologyPage : UserControl
 
             // 防止重复。
             if (
-                project.Phonology.Consonants.Any(
-                    x => x.Symbol == phoneme))
-            {
+                project.Phonology.Consonants.Any(x => x.Symbol == phoneme))
                 return;
-            }
 
 
             // 1. 普通辅音
-            IpaConsonant? ipaConsonant =
-                IpaConsonants.All.FirstOrDefault(
-                    x => x.Symbol == phoneme);
+            var ipaConsonant =
+                IpaConsonants.All.FirstOrDefault(x => x.Symbol == phoneme);
 
 
             if (
@@ -3863,13 +3477,12 @@ public class PhonologyPage : UserControl
             else
             {
                 // 2. Non-pulmonic
-                IpaNonPulmonicConsonant?
+                var
                     nonPulmonic =
                         IpaNonPulmonicConsonants.All
-                            .FirstOrDefault(
-                                x =>
-                                    x.Symbol ==
-                                    phoneme);
+                            .FirstOrDefault(x =>
+                                x.Symbol ==
+                                phoneme);
 
 
                 if (
@@ -3912,12 +3525,11 @@ public class PhonologyPage : UserControl
                 else
                 {
                     // 3. Other IPA Symbols
-                    IpaOtherSymbol? otherSymbol =
+                    var otherSymbol =
                         IpaOtherSymbols.All
-                            .FirstOrDefault(
-                                x =>
-                                    x.Symbol ==
-                                    phoneme);
+                            .FirstOrDefault(x =>
+                                x.Symbol ==
+                                phoneme);
 
 
                     if (
@@ -3974,9 +3586,8 @@ public class PhonologyPage : UserControl
         // 元音
         else
         {
-            IpaVowel? ipaVowel =
-                IpaVowels.All.FirstOrDefault(
-                    x => x.Symbol == phoneme);
+            var ipaVowel =
+                IpaVowels.All.FirstOrDefault(x => x.Symbol == phoneme);
 
 
             if (
@@ -3993,11 +3604,8 @@ public class PhonologyPage : UserControl
 
 
             if (
-                project.Phonology.Vowels.Any(
-                    x => x.Symbol == phoneme))
-            {
+                project.Phonology.Vowels.Any(x => x.Symbol == phoneme))
                 return;
-            }
 
 
             VowelPhoneme projectVowel =
@@ -4058,12 +3666,11 @@ public class PhonologyPage : UserControl
     {
         if (
             consonantList.SelectedItem
-                is ConsonantEntry consonant)
+            is ConsonantEntry consonant)
         {
-            project.Phonology.Consonants.RemoveAll(
-                x =>
-                    x.Symbol ==
-                    consonant.Symbol);
+            project.Phonology.Consonants.RemoveAll(x =>
+                x.Symbol ==
+                consonant.Symbol);
 
 
             consonantList.Items.Remove(
@@ -4085,12 +3692,11 @@ public class PhonologyPage : UserControl
 
         if (
             vowelList.SelectedItem
-                is VowelEntry vowel)
+            is VowelEntry vowel)
         {
-            project.Phonology.Vowels.RemoveAll(
-                x =>
-                    x.Symbol ==
-                    vowel.Symbol);
+            project.Phonology.Vowels.RemoveAll(x =>
+                x.Symbol ==
+                vowel.Symbol);
 
 
             vowelList.Items.Remove(
@@ -4109,12 +3715,10 @@ public class PhonologyPage : UserControl
     private void RefreshConsonantChart()
     {
         foreach (
-            Label cell
+            var cell
             in consonantChartCells.Values)
-        {
             cell.Text =
                 "";
-        }
 
 
         foreach (
@@ -4122,33 +3726,27 @@ public class PhonologyPage : UserControl
             in consonantList.Items)
         {
             var key =
-                (
-                    consonant.Place,
-                    consonant.Manner,
-                    consonant.Voicing
-                );
+            (
+                consonant.Place,
+                consonant.Manner,
+                consonant.Voicing
+            );
 
 
             if (
                 !consonantChartCells.TryGetValue(
                     key,
-                    out Label? cell))
-            {
+                    out var cell))
                 continue;
-            }
 
 
             if (
                 cell.Text.Length == 0)
-            {
                 cell.Text =
                     consonant.Symbol;
-            }
             else
-            {
                 cell.Text +=
                     $" {consonant.Symbol}";
-            }
 
 
             cell.Font =
@@ -4163,36 +3761,30 @@ public class PhonologyPage : UserControl
     private void RefreshNonPulmonicChart()
     {
         foreach (
-            Label cell
+            var cell
             in nonPulmonicChartCells.Values)
-        {
             cell.Text =
                 "";
-        }
 
 
         foreach (
-            ConsonantPhoneme consonant
+            var consonant
             in project.Phonology.Consonants)
         {
             if (
                 string.IsNullOrWhiteSpace(
                     consonant.Category))
-            {
                 continue;
-            }
 
 
             if (
                 !nonPulmonicChartCells.TryGetValue(
                     consonant.Category,
-                    out Label? cell))
-            {
+                    out var cell))
                 continue;
-            }
 
 
-            string description =
+            var description =
                 string.IsNullOrWhiteSpace(
                     consonant.Description)
                     ? ""
@@ -4200,7 +3792,7 @@ public class PhonologyPage : UserControl
                         consonant.Description);
 
 
-            string line =
+            var line =
                 description.Length == 0
                     ? consonant.Symbol
                     : $"{consonant.Symbol}    " +
@@ -4209,16 +3801,12 @@ public class PhonologyPage : UserControl
 
             if (
                 cell.Text.Length == 0)
-            {
                 cell.Text =
                     line;
-            }
             else
-            {
                 cell.Text +=
                     Environment.NewLine +
                     line;
-            }
         }
     }
 
@@ -4231,41 +3819,34 @@ public class PhonologyPage : UserControl
 
 
         foreach (
-            ConsonantPhoneme consonant
+            var consonant
             in project.Phonology.Consonants)
         {
-            IpaOtherSymbol? reference =
+            var reference =
                 IpaOtherSymbols.All
-                    .FirstOrDefault(
-                        x =>
-                            x.Symbol ==
-                            consonant.Symbol);
+                    .FirstOrDefault(x =>
+                        x.Symbol ==
+                        consonant.Symbol);
 
 
             if (
                 reference == null)
-            {
                 continue;
-            }
 
 
-            string line =
+            var line =
                 $"{reference.Symbol}    " +
                 $"{reference.Name}";
 
 
             if (
                 otherSymbolsContent.Text.Length == 0)
-            {
                 otherSymbolsContent.Text =
                     line;
-            }
             else
-            {
                 otherSymbolsContent.Text +=
                     "    " +
                     line;
-            }
         }
     }
 
@@ -4348,7 +3929,7 @@ public class PhonologyPage : UserControl
     private static string GetConsonantDescription(
         IpaConsonant consonant)
     {
-        string voicing =
+        var voicing =
             consonant.Voicing.StartsWith(
                 "清音")
                 ? "清"
@@ -4375,7 +3956,7 @@ public class PhonologyPage : UserControl
     private static string GetChinesePart(
         string bilingualText)
     {
-        int separatorIndex =
+        var separatorIndex =
             bilingualText.IndexOf(
                 "  ",
                 StringComparison.Ordinal);
@@ -4386,5 +3967,201 @@ public class PhonologyPage : UserControl
                 ? bilingualText[
                     ..separatorIndex]
                 : bilingualText;
+    }
+
+
+    private enum SelectionMode
+    {
+        Detailed,
+        Guided,
+        List
+    }
+
+
+    // 下拉栏中的显示项目。
+    private class IpaDisplayItem
+    {
+        // 分组标题。
+        public IpaDisplayItem(
+            string text)
+        {
+            Text = text;
+        }
+
+
+        // 普通辅音。
+        public IpaDisplayItem(
+            string text,
+            IpaConsonant consonant)
+        {
+            Text = text;
+            Consonant = consonant;
+        }
+
+
+        // 非肺部气流辅音。
+        public IpaDisplayItem(
+            string text,
+            IpaNonPulmonicConsonant consonant)
+        {
+            Text = text;
+            NonPulmonicConsonant = consonant;
+        }
+
+
+        // Other IPA Symbol。
+        public IpaDisplayItem(
+            string text,
+            IpaOtherSymbol symbol)
+        {
+            Text = text;
+            OtherSymbol = symbol;
+        }
+
+
+        // 元音。
+        public IpaDisplayItem(
+            string text,
+            IpaVowel vowel)
+        {
+            Text = text;
+            Vowel = vowel;
+        }
+
+        public string Text { get; }
+
+        public IpaConsonant? Consonant { get; }
+
+        public IpaNonPulmonicConsonant?
+            NonPulmonicConsonant { get; }
+
+        public IpaOtherSymbol?
+            OtherSymbol { get; }
+
+        public IpaVowel? Vowel { get; }
+
+
+        public override string ToString()
+        {
+            return Text;
+        }
+    }
+
+
+    private class IpaCategoryItem
+    {
+        public IpaCategoryItem(
+            string manner,
+            string text)
+        {
+            Manner = manner;
+            Text = text;
+        }
+
+        public string Manner { get; }
+
+        public string Text { get; }
+
+
+        public override string ToString()
+        {
+            return Text;
+        }
+    }
+
+
+    private class IpaVowelCategoryItem
+    {
+        public IpaVowelCategoryItem(
+            string height,
+            string text)
+        {
+            Height = height;
+            Text = text;
+        }
+
+        public string Height { get; }
+
+        public string Text { get; }
+
+
+        public override string ToString()
+        {
+            return Text;
+        }
+    }
+
+
+    // 项目辅音在左侧清单中的显示形式。
+    private class ConsonantEntry
+    {
+        public string Symbol { get; set; } = "";
+
+        public string Place { get; set; } = "";
+
+        public string Manner { get; set; } = "";
+
+        public string Voicing { get; set; } = "";
+
+        public string Category { get; set; } = "";
+
+        public string Description { get; set; } = "";
+
+
+        public override string ToString()
+        {
+            // 非肺部辅音和 Other Symbols
+            // 使用 Description 显示。
+            if (!string.IsNullOrWhiteSpace(
+                    Description))
+                return
+                    $"{Symbol}    " +
+                    $"{GetChinesePart(Description)}";
+
+            var place =
+                Place.Split("  ")[0];
+
+            var manner =
+                Manner.Split("  ")[0];
+
+            var voicing =
+                Voicing.StartsWith("清音")
+                    ? "清"
+                    : "浊";
+
+            return
+                $"{Symbol}    " +
+                $"{place}{voicing}{manner}";
+        }
+    }
+
+
+    // 项目元音在清单中的显示形式。
+    private class VowelEntry
+    {
+        public string Symbol { get; set; } = "";
+
+        public string Height { get; set; } = "";
+
+        public string Backness { get; set; } = "";
+
+        public string Roundedness { get; set; } = "";
+
+
+        public override string ToString()
+        {
+            var height =
+                GetChinesePart(Height);
+
+            var backness =
+                GetChinesePart(Backness);
+
+            var roundedness =
+                GetChinesePart(Roundedness);
+
+            return
+                $"{Symbol}    " +
+                $"{roundedness}{backness}{height}";
+        }
     }
 }

@@ -4,17 +4,17 @@ namespace CBT.Pages;
 
 public class OverviewPage : UserControl
 {
+    // 项目描述输入框。
+    private readonly TextBox descriptionTextBox = new();
+
+    // 项目名称输入框。
+    private readonly TextBox nameTextBox = new();
+
     // 当前正在编辑的语言项目。
     private readonly ConlangProject project;
 
     // 当项目内容发生变化时，用来通知主窗口。
     private readonly Action? projectModified;
-
-    // 项目名称输入框。
-    private readonly TextBox nameTextBox = new();
-
-    // 项目描述输入框。
-    private readonly TextBox descriptionTextBox = new();
 
     public OverviewPage(
         ConlangProject project,

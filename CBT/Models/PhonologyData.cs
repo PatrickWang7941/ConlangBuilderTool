@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace CBT.Models;
+﻿namespace CBT.Models;
 
 public class PhonologyData
 {
@@ -28,6 +24,7 @@ public class ConsonantPhoneme
 
     public string Description { get; set; } = "";
 }
+
 public class VowelPhoneme
 {
     public string Symbol { get; set; } = "";
