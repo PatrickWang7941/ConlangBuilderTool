@@ -55,7 +55,7 @@ public class PhonologyPage : UserControl
     //添加或选择元音属性
     private readonly ComboBox vowelHeight = new();
     private readonly ComboBox vowelBackness = new();
-    private readonly ComboBox vowelRoundeness = new();
+    private readonly ComboBox vowelRoundedness = new();
 
 
 
@@ -67,13 +67,21 @@ public class PhonologyPage : UserControl
     {
         public string Text { get; }
         public IpaConsonant? Consonant { get; }
-
-        public IpaDisplayItem(string text, IpaConsonant? consonant = null)
+        public IpaVowel? Vowel { get; }
+        public IpaDisplayItem(string text)
+        {
+            Text = text;
+        }
+        public IpaDisplayItem(string text, IpaConsonant consonant)
         {
             Text = text;
             Consonant = consonant;
         }
-
+        public IpaDisplayItem(string text, IpaVowel vowel)
+        {
+            Text = text;
+            Vowel = vowel;
+        }
         public override string ToString()
         {
             return Text;
@@ -95,6 +103,123 @@ public class PhonologyPage : UserControl
         {
             return Text;
         }
+    }
+    private class IpaVowelCategoryItem
+    {
+        public string Height { get; }
+        public string Text { get; }
+
+        public IpaVowelCategoryItem(string height, string text)
+        {
+            Height = height;
+            Text = text;
+        }
+        public override string ToString()
+        {
+            return Text;
+        }
+    }
+    //加载引导模式中的元音类别
+    private void LoadVowelCategories()
+    {
+        bool wasSynchronizing = isSynchronizingSelection;
+        isSynchronizingSelection = true;
+
+        ipaCategory.Items.Clear();
+
+        foreach (string height in IpaVowels.All
+            .Select(x => x.Height)
+            .Distinct())
+        {
+            ipaCategory.Items.Add(
+                new IpaVowelCategoryItem(
+                    height,
+                    GetVowelCategoryDisplayName(height)
+                )
+            );
+        }
+
+        ipaCategory.SelectedIndex = -1;
+        ipaChoice.Items.Clear();
+
+        isSynchronizingSelection = wasSynchronizing;
+    }
+    //根据高度加载引导模式中的具体元音
+    private void PopulateGuidedVowelChoices(string height)
+    {
+        bool wasSynchronizing = isSynchronizingSelection;
+        isSynchronizingSelection = true;
+
+        ipaChoice.Items.Clear();
+
+        foreach (IpaVowel vowel in
+            IpaVowels.All.Where(x => x.Height == height))
+        {
+            ipaChoice.Items.Add(
+                new IpaDisplayItem(
+                    $"{vowel.Symbol}   {GetVowelDescription(vowel)}",
+                    vowel
+                )
+            );
+        }
+
+        ipaChoice.SelectedIndex = -1;
+
+        isSynchronizingSelection = wasSynchronizing;
+    }
+    //加载列表模式中的元音
+    private void LoadVowelListPicker()
+    {
+        bool wasSynchronizing = isSynchronizingSelection;
+        isSynchronizingSelection = true;
+
+        ipaSymbolPicker.Items.Clear();
+
+        foreach (IGrouping<string, IpaVowel> category in
+            IpaVowels.All.GroupBy(x => x.Height))
+        {
+            ipaSymbolPicker.Items.Add(
+                new IpaDisplayItem(
+                    $"── {GetVowelCategoryDisplayName(category.Key)} ──"
+                )
+            );
+
+            foreach (IpaVowel vowel in category)
+            {
+                ipaSymbolPicker.Items.Add(
+                    new IpaDisplayItem(
+                        $"{vowel.Symbol}   {GetVowelDescription(vowel)}",
+                        vowel
+                    )
+                );
+            }
+        }
+
+        ipaSymbolPicker.SelectedIndex = -1;
+        lastIpaSymbolIndex = -1;
+
+        isSynchronizingSelection = wasSynchronizing;
+    }
+    private static string GetVowelCategoryDisplayName(string height)
+    {
+        return height switch
+        {
+            "闭  Close" => "闭元音  Close vowels",
+            "近闭  Near-close" => "近闭元音  Near-close vowels",
+            "半闭  Close-mid" => "半闭元音  Close-mid vowels",
+            "中  Mid" => "中元音  Mid vowels",
+            "半开  Open-mid" => "半开元音  Open-mid vowels",
+            "近开  Near-open" => "近开元音  Near-open vowels",
+            "开  Open" => "开元音  Open vowels",
+            _ => height
+        };
+    }
+
+    private static string GetVowelDescription(IpaVowel vowel)
+    {
+        return $"{GetChinesePart(vowel.Roundedness)}" +
+            $"{GetChinesePart(vowel.Backness)}" +
+            $"{GetChinesePart(vowel.Height)}元音";
     }
     //辅音和它的语言学属性
     private class ConsonantEntry
@@ -213,7 +338,8 @@ public class PhonologyPage : UserControl
                 return;
 
             //分组标题只负责显示，不能成为实际音素
-            if (selectedItem.Consonant == null)
+            if (selectedItem.Consonant == null &&
+                selectedItem.Vowel == null)
             {
                 isSynchronizingSelection = true;
                 ipaSymbolPicker.SelectedIndex = lastIpaSymbolIndex;
@@ -222,6 +348,17 @@ public class PhonologyPage : UserControl
             }
 
             lastIpaSymbolIndex = ipaSymbolPicker.SelectedIndex;
+
+            if (selectedItem.Consonant != null)
+            {
+                ApplyConsonant(selectedItem.Consonant);
+                return;
+            }
+
+            if (selectedItem.Vowel != null)
+            {
+                ApplyVowel(selectedItem.Vowel);
+            }
             ApplyConsonant(selectedItem.Consonant);
         };
 
@@ -249,21 +386,37 @@ public class PhonologyPage : UserControl
 
         ipaCategory.SelectedIndexChanged += (sender, e) =>
         {
-            if (isSynchronizingSelection ||
-                ipaCategory.SelectedItem is not IpaCategoryItem category)
+            if (isSynchronizingSelection)
                 return;
 
-            PopulateGuidedChoices(category.Manner);
+            if (ipaCategory.SelectedItem is IpaCategoryItem consonantCategory)
+            {
+                PopulateGuidedChoices(consonantCategory.Manner);
+                return;
+            }
+
+            if (ipaCategory.SelectedItem is IpaVowelCategoryItem vowelCategory)
+            {
+                PopulateGuidedVowelChoices(vowelCategory.Height);
+            }
         };
 
         ipaChoice.SelectedIndexChanged += (sender, e) =>
         {
             if (isSynchronizingSelection ||
-                ipaChoice.SelectedItem is not IpaDisplayItem selectedItem ||
-                selectedItem.Consonant == null)
+                ipaChoice.SelectedItem is not IpaDisplayItem selectedItem)
                 return;
 
-            ApplyConsonant(selectedItem.Consonant);
+            if (selectedItem.Consonant != null)
+            {
+                ApplyConsonant(selectedItem.Consonant);
+                return;
+            }
+
+            if (selectedItem.Vowel != null)
+            {
+                ApplyVowel(selectedItem.Vowel);
+            }
         };
 
         //选择发音部位
@@ -464,6 +617,11 @@ public class PhonologyPage : UserControl
 
         section.Controls.Add(vowelTitle);
         section.Controls.Add(vowelList);
+        Panel bottomSpacer = new();
+        bottomSpacer.Size = new Size(1, 60);
+        bottomSpacer.Margin = new Padding(0);
+        section.Controls.Add(bottomSpacer);
+
 
         return section;
     }
@@ -752,7 +910,7 @@ public class PhonologyPage : UserControl
         //列表模式
         bool listMode = selectionMode == SelectionMode.List;
         //列表模式显示大型 IPA 下拉栏
-        ipaSymbolPicker.Visible = listMode && isConsonant;
+        ipaSymbolPicker.Visible = listMode;
         //详细模式显示语言学属性
         consonantPlace.Visible = detailedMode && isConsonant;
         consonantManner.Visible = detailedMode && isConsonant;
@@ -789,8 +947,22 @@ public class PhonologyPage : UserControl
         //列表模式
         if (selectionMode == SelectionMode.List)
         {
-            if (currentConsonant != null)
-                SelectDetailedConsonant(currentConsonant);
+            if (isConsonant)
+            {
+                LoadDetailedIpaPicker();
+
+                if (currentConsonant != null)
+                    SelectDetailedConsonant(currentConsonant);
+            }
+            else
+            {
+                LoadVowelListPicker();
+
+                IpaVowel? currentVowel = FindVowelFromInput();
+
+                if (currentVowel != null)
+                    SelectListVowel(currentVowel);
+            }
 
             return;
         }
@@ -810,12 +982,14 @@ public class PhonologyPage : UserControl
             isSynchronizingSelection = true;
 
             ipaCategory.Items.Clear();
-            ipaCategory.Items.Add("元音分类（待扩展）");
-            ipaCategory.SelectedIndex = 0;
-            ipaCategory.Enabled = false;
+            LoadVowelCategories();
 
-            ipaChoice.Items.Clear();
-            ipaChoice.Items.Add("具体 IPA（待扩展）");
+            IpaVowel? currentVowel = FindVowelFromInput();
+
+            if (currentVowel != null)
+            {
+                //稍后再补自动定位当前元音
+            }
             ipaChoice.SelectedIndex = 0;
             ipaChoice.Enabled = false;
 
@@ -992,6 +1166,12 @@ public class PhonologyPage : UserControl
 
         isSynchronizingSelection = wasSynchronizing;
     }
+    private IpaVowel? FindVowelFromInput()
+    {
+        string symbol = phonemeInput.Text.Trim();
+
+        return IpaVowels.All.FirstOrDefault(x => x.Symbol == symbol);
+    }
     //根据手动输入的 IPA 符号更新辅音属性
     private void UpdateFeaturesFromSymbol()
     {
@@ -1002,22 +1182,23 @@ public class PhonologyPage : UserControl
         if (phonemeType.SelectedIndex == 0)
         {
             IpaConsonant? consonant = FindConsonantFromInput();
+
             if (consonant == null)
             {
                 ClearIpaSelections();
                 return;
             }
+
             ApplyConsonant(consonant);
             return;
         }
 
         //元音
-        string symbol = phonemeInput.Text.Trim();
+        IpaVowel? vowel = FindVowelFromInput();
 
-        IpaVowel? vowel =
-            IpaVowels.All.FirstOrDefault(x => x.Symbol == symbol);
         if (vowel == null)
             return;
+
         ApplyVowel(vowel);
     }
     //把数据库里的辅音类别改成适合下拉栏显示的双语复数形式
