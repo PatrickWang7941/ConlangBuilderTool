@@ -46,6 +46,9 @@ public class PhonologyPage : UserControl
     private readonly ListBox consonantList = new();
     //辅音音系表生成
     private readonly TableLayoutPanel consonantChart = new();
+    //字典，记录的是语言学属性对应的东西
+    private readonly Dictionary<(string Place, string Manner, string Voicing), Label>
+        consonantChartCells = new();
     private readonly ListBox vowelList = new();
     //下拉栏里的分组标题和IPA项目共用这个显示类型
     private class IpaDisplayItem
@@ -415,7 +418,23 @@ public class PhonologyPage : UserControl
         "咽\nPharyngeal",
         "声门\nGlottal",
         "唇软腭\nLabial-velar"
-    };
+        };
+
+        string[] placeKeys =
+        {
+            "双唇  Bilabial",
+            "唇齿  Labiodental",
+            "齿  Dental",
+            "齿龈  Alveolar",
+            "龈后  Postalveolar",
+            "卷舌  Retroflex",
+            "硬腭  Palatal",
+            "软腭  Velar",
+            "小舌  Uvular",
+            "咽  Pharyngeal",
+            "声门  Glottal",
+            "唇软腭  Labial-velar"
+        };
 
         string[] manners =
         {
@@ -427,9 +446,23 @@ public class PhonologyPage : UserControl
         "边擦音\nLateral fricative",
         "近音\nApproximant",
         "边近音\nLateral approximant"
-    };
+        };
+
+        string[] mannerKeys =
+        {
+            "塞音  Plosive",
+            "鼻音  Nasal",
+            "颤音  Trill",
+            "闪音  Tap / Flap",
+            "擦音  Fricative",
+            "边擦音  Lateral fricative",
+            "近音  Approximant",
+            "边近音  Lateral approximant",
+            "塞擦音  Affricate"
+        };
 
         consonantChart.Controls.Clear();
+        consonantChartCells.Clear();
 
         consonantChart.RowCount = manners.Length + 1;
         consonantChart.ColumnCount = places.Length + 1;
@@ -503,6 +536,14 @@ public class PhonologyPage : UserControl
                 Label voiced = new();
                 voiced.Dock = DockStyle.Fill;
                 voiced.TextAlign = ContentAlignment.MiddleCenter;
+                //记录这个格子对应的语言学属性
+                consonantChartCells[
+                    (placeKeys[column], mannerKeys[row], "清音  Voiceless")
+                ] = voiceless;
+
+                consonantChartCells[
+                    (placeKeys[column], mannerKeys[row], "浊音  Voiced")
+                ] = voiced;
 
                 cell.Controls.Add(voiceless, 0, 0);
                 cell.Controls.Add(voiced, 1, 0);
@@ -514,6 +555,31 @@ public class PhonologyPage : UserControl
         chartContainer.Controls.Add(consonantChart);
 
         return chartContainer;
+    }
+    //根据辅音清单刷新辅音音系表
+    private void RefreshConsonantChart()
+    {
+        //整个表清空
+        foreach (Label cell in consonantChartCells.Values)
+        {
+            cell.Text = "";
+        }
+        //重新把所有辅音放进对应格子
+        foreach (ConsonantEntry consonant in consonantList.Items)
+        {
+            var key =
+                (consonant.Place, consonant.Manner, consonant.Voicing);
+
+            if (!consonantChartCells.TryGetValue(key, out Label? cell))
+                continue;
+            //同一个位置如果以后有多个音素，用空格分开
+            if (cell.Text.Length == 0)
+                cell.Text = consonant.Symbol;
+            else
+                cell.Text += $" {consonant.Symbol}";
+
+            cell.Font = new Font("Microsoft YaHei UI", 12);
+        }
     }
     //加载详细模式中的分组IPA清单
     private void LoadDetailedIpaPicker()
@@ -597,7 +663,7 @@ public class PhonologyPage : UserControl
     {
         UpdateSelectionMode();
     }
-    //在详细模式和引导模式之间切换
+    //切换三个模式
     private void UpdateSelectionMode()
     {
         bool isConsonant = phonemeType.SelectedIndex == 0;
@@ -869,6 +935,7 @@ public class PhonologyPage : UserControl
             consonant.Voicing = consonantVoicing.Text;
 
             consonantList.Items.Add(consonant);
+            RefreshConsonantChart();
         }
 
         //添加元音
@@ -888,6 +955,7 @@ public class PhonologyPage : UserControl
         if (consonantList.SelectedItem != null)
         {
             consonantList.Items.Remove(consonantList.SelectedItem);
+            RefreshConsonantChart();
             return;
         }
 
