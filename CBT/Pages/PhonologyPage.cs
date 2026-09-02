@@ -359,7 +359,6 @@ public class PhonologyPage : UserControl
             {
                 ApplyVowel(selectedItem.Vowel);
             }
-            ApplyConsonant(selectedItem.Consonant);
         };
 
         //选择音素类型
@@ -976,24 +975,12 @@ public class PhonologyPage : UserControl
                 SelectGuidedConsonant(currentConsonant);
         }
         else
-        {
-            //元音暂时只保留模式框架，之后接入元音数据库
-            bool wasSynchronizing = isSynchronizingSelection;
-            isSynchronizingSelection = true;
+{
+            //引导模式：加载元音类别
+            ipaCategory.Enabled = true;
+            ipaChoice.Enabled = true;
 
-            ipaCategory.Items.Clear();
             LoadVowelCategories();
-
-            IpaVowel? currentVowel = FindVowelFromInput();
-
-            if (currentVowel != null)
-            {
-                //稍后再补自动定位当前元音
-            }
-            ipaChoice.SelectedIndex = 0;
-            ipaChoice.Enabled = false;
-
-            isSynchronizingSelection = wasSynchronizing;
         }
     }
     //把一个辅音同步到输入框、属性框和两种IPA选择器
@@ -1012,6 +999,25 @@ public class PhonologyPage : UserControl
 
         SelectDetailedConsonant(consonant);
         SelectGuidedConsonant(consonant);
+
+        isSynchronizingSelection = wasSynchronizing;
+    }
+    //列表模式中定位当前元音
+    private void SelectListVowel(IpaVowel vowel)
+    {
+        bool wasSynchronizing = isSynchronizingSelection;
+        isSynchronizingSelection = true;
+
+        for (int index = 0; index < ipaSymbolPicker.Items.Count; index++)
+        {
+            if (ipaSymbolPicker.Items[index] is IpaDisplayItem item &&
+                item.Vowel?.Symbol == vowel.Symbol)
+            {
+                ipaSymbolPicker.SelectedIndex = index;
+                lastIpaSymbolIndex = index;
+                break;
+            }
+        }
 
         isSynchronizingSelection = wasSynchronizing;
     }
