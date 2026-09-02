@@ -58,6 +58,7 @@ public class PhonologyPage : UserControl
     {
         public string Text { get; }
         public IpaConsonant? Consonant { get; }
+        public IpaNonPulmonicConsonant? NonPulmonicConsonant { get; }
         public IpaVowel? Vowel { get; }
 
         // 创建只显示文字、不关联具体音素的分组标题。
@@ -71,6 +72,15 @@ public class PhonologyPage : UserControl
         {
             Text = text;
             Consonant = consonant;
+        }
+
+        // 创建关联非肺部气流辅音的下拉栏项目。
+        public IpaDisplayItem(
+            string text,
+            IpaNonPulmonicConsonant consonant)
+        {
+            Text = text;
+            NonPulmonicConsonant = consonant;
         }
 
         // 创建关联元音数据的下拉栏项目。
@@ -132,15 +142,26 @@ public class PhonologyPage : UserControl
         public string Place { get; set; } = "";
         public string Manner { get; set; } = "";
         public string Voicing { get; set; } = "";
+        public string Category { get; set; } = "";
+        public string Description { get; set; } = "";
 
         // 把辅音符号和主要属性组合成清单中的简短说明。
         public override string ToString()
         {
+            // 非肺部气流辅音没有普通的数据。
+            if (!string.IsNullOrWhiteSpace(Description))
+            {
+                return
+                    $"{Symbol}    {GetChinesePart(Description)}";
+            }
+
             string place = Place.Split("  ")[0];
             string manner = Manner.Split("  ")[0];
-            string voicing = Voicing.StartsWith("清音") ? "清" : "浊";
+            string voicing =
+                Voicing.StartsWith("清音") ? "清" : "浊";
 
-            return $"{Symbol}    {place}{voicing}{manner}";
+            return
+                $"{Symbol}    {place}{voicing}{manner}";
         }
     }
     // 元音和它的语言学属性
@@ -350,7 +371,9 @@ public class PhonologyPage : UserControl
             }
 
             // 分组标题只负责显示，不能成为实际音素。
-            if (selectedItem.Consonant == null && selectedItem.Vowel == null)
+            if (selectedItem.Consonant == null &&
+                selectedItem.NonPulmonicConsonant == null &&
+                selectedItem.Vowel == null)
             {
                 isSynchronizingSelection = true;
                 ipaSymbolPicker.SelectedIndex = lastIpaSymbolIndex;
@@ -363,6 +386,14 @@ public class PhonologyPage : UserControl
             if (selectedItem.Consonant != null)
             {
                 ApplyConsonant(selectedItem.Consonant);
+                return;
+            }
+
+            if (selectedItem.NonPulmonicConsonant != null)
+            {
+                ApplyNonPulmonicConsonant(
+                    selectedItem.NonPulmonicConsonant);
+
                 return;
             }
 
@@ -1148,7 +1179,26 @@ public class PhonologyPage : UserControl
                         consonant));
             }
         }
+        // 加载 IPA 2015 中独立列出的非肺部气流辅音。
+        foreach (
+            IGrouping<string, IpaNonPulmonicConsonant> category
+            in IpaNonPulmonicConsonants.All.GroupBy(
+                x => x.Category))
+        {
+            ipaSymbolPicker.Items.Add(
+                new IpaDisplayItem(
+                    $"── {category.Key} ──"));
 
+            foreach (
+                IpaNonPulmonicConsonant consonant
+                in category)
+            {
+                ipaSymbolPicker.Items.Add(
+                    new IpaDisplayItem(
+                        $"{consonant.Symbol}   {consonant.Description}",
+                        consonant));
+            }
+        }
         ipaSymbolPicker.SelectedIndex = -1;
         lastIpaSymbolIndex = -1;
         ipaSymbolPicker.EndUpdate();
@@ -1232,6 +1282,29 @@ public class PhonologyPage : UserControl
 
         isSynchronizingSelection = wasSynchronizing;
     }
+    // 把非肺部气流辅音同步到输入框。
+    private void ApplyNonPulmonicConsonant(
+        IpaNonPulmonicConsonant consonant)
+    {
+        bool wasSynchronizing =
+            isSynchronizingSelection;
+
+        isSynchronizingSelection = true;
+
+        phonemeType.SelectedIndex = 0;
+
+        phonemeInput.Text =
+            consonant.Symbol;
+
+        phonemeInput.SelectionStart =
+            phonemeInput.Text.Length;
+
+        isSynchronizingSelection =
+            wasSynchronizing;
+
+        noMatchingPhonemeLabel.Visible = false;
+        addPhonemeButton.Enabled = true;
+    }
 
     // 在列表模式下拉栏中定位指定辅音。
     private void SelectDetailedConsonant(IpaConsonant consonant)
@@ -1292,6 +1365,17 @@ public class PhonologyPage : UserControl
         string symbol = NormalizeInputSymbol(phonemeInput.Text.Trim());
 
         return IpaConsonants.All.FirstOrDefault(x => x.Symbol == symbol);
+    }
+    // 根据输入框查找非肺部气流辅音。
+    private IpaNonPulmonicConsonant?
+        FindNonPulmonicConsonantFromInput()
+    {
+        string symbol =
+            phonemeInput.Text.Trim();
+
+        return IpaNonPulmonicConsonants.All
+            .FirstOrDefault(
+                x => x.Symbol == symbol);
     }
 
     // 把普通拉丁字母 g 统一为 IPA 使用的单层 ɡ。
@@ -1558,6 +1642,33 @@ public class PhonologyPage : UserControl
 
             if (consonant == null)
             {
+                IpaNonPulmonicConsonant? nonPulmonic =
+                    FindNonPulmonicConsonantFromInput();
+
+                // 如果属于 IPA 2015 的非肺部辅音，
+                // 允许添加，但不尝试填写普通辅音属性框。
+                if (nonPulmonic != null)
+                {
+                    noMatchingPhonemeLabel.Visible = false;
+                    addPhonemeButton.Enabled = true;
+
+                    return;
+                }
+
+                ClearIpaSelections();
+
+                noMatchingPhonemeLabel.Visible = true;
+                addPhonemeButton.Enabled = false;
+
+                return;
+            }
+
+            // 元音
+            IpaVowel? vowel =
+            FindVowelFromInput();
+
+            if (vowel == null)
+            {
                 ClearIpaSelections();
 
                 noMatchingPhonemeLabel.Visible = true;
@@ -1569,30 +1680,8 @@ public class PhonologyPage : UserControl
             noMatchingPhonemeLabel.Visible = false;
             addPhonemeButton.Enabled = true;
 
-            ApplyConsonant(consonant);
-
-            return;
+            ApplyVowel(vowel);
         }
-
-        // 元音
-        IpaVowel? vowel =
-            FindVowelFromInput();
-
-        if (vowel == null)
-        {
-            ClearIpaSelections();
-
-            noMatchingPhonemeLabel.Visible = true;
-            addPhonemeButton.Enabled = false;
-
-            return;
-        }
-
-        noMatchingPhonemeLabel.Visible = false;
-        addPhonemeButton.Enabled = true;
-
-        ApplyVowel(vowel);
-    }
 
     // 清除两个 IPA 选择器中的当前选择和历史索引。
     private void ClearIpaSelections()
@@ -1620,8 +1709,10 @@ public class PhonologyPage : UserControl
                     Symbol = consonant.Symbol,
                     Place = consonant.Place,
                     Manner = consonant.Manner,
-                    Voicing = consonant.Voicing
-                });
+                    Voicing = consonant.Voicing,
+                    Category = consonant.Category,
+                    Description = consonant.Description
+                }
         }
 
         foreach (VowelPhoneme vowel in project.Phonology.Vowels)
@@ -1641,7 +1732,9 @@ public class PhonologyPage : UserControl
     }
     // 把当前输入的音素加入项目。
     // 只有 IPA 参考数据库中存在的音素才能被加入。
-    private void AddPhoneme(object? sender, EventArgs e)
+    private void AddPhoneme(
+        object? sender,
+        EventArgs e)
     {
         string phoneme =
             phonemeInput.Text.Trim();
@@ -1657,19 +1750,6 @@ public class PhonologyPage : UserControl
             phoneme =
                 NormalizeInputSymbol(phoneme);
 
-            // 必须从 IPA 数据库中找到对应辅音。
-            IpaConsonant? ipaConsonant =
-                IpaConsonants.All.FirstOrDefault(
-                    x => x.Symbol == phoneme);
-
-            if (ipaConsonant == null)
-            {
-                noMatchingPhonemeLabel.Visible = true;
-                addPhonemeButton.Enabled = false;
-
-                return;
-            }
-
             // 防止重复添加。
             if (project.Phonology.Consonants.Any(
                 x => x.Symbol == phoneme))
@@ -1677,83 +1757,151 @@ public class PhonologyPage : UserControl
                 return;
             }
 
-            // 属性直接来自 IPA 参考数据库，
-            // 而不是依赖界面下拉框当前残留的状态。
-            ConsonantPhoneme projectConsonant = new()
+            // 首先查找普通肺部辅音。
+            IpaConsonant? ipaConsonant =
+                IpaConsonants.All.FirstOrDefault(
+                    x => x.Symbol == phoneme);
+
+            if (ipaConsonant != null)
             {
-                Symbol = ipaConsonant.Symbol,
-                Place = ipaConsonant.Place,
-                Manner = ipaConsonant.Manner,
-                Voicing = ipaConsonant.Voicing
-            };
+                ConsonantPhoneme projectConsonant =
+                    new()
+                    {
+                        Symbol = ipaConsonant.Symbol,
+                        Place = ipaConsonant.Place,
+                        Manner = ipaConsonant.Manner,
+                        Voicing = ipaConsonant.Voicing
+                    };
 
-            project.Phonology.Consonants.Add(
-                projectConsonant);
+                project.Phonology.Consonants.Add(
+                    projectConsonant);
 
-            ConsonantEntry displayConsonant = new()
+                consonantList.Items.Add(
+                    new ConsonantEntry
+                    {
+                        Symbol =
+                            projectConsonant.Symbol,
+                        Place =
+                            projectConsonant.Place,
+                        Manner =
+                            projectConsonant.Manner,
+                        Voicing =
+                            projectConsonant.Voicing
+                    });
+
+                RefreshConsonantChart();
+            }
+            else
             {
-                Symbol = projectConsonant.Symbol,
-                Place = projectConsonant.Place,
-                Manner = projectConsonant.Manner,
-                Voicing = projectConsonant.Voicing
-            };
+                // 再查找非肺部气流辅音。
+                IpaNonPulmonicConsonant?
+                    nonPulmonic =
+                        IpaNonPulmonicConsonants.All
+                            .FirstOrDefault(
+                                x => x.Symbol == phoneme);
 
-            consonantList.Items.Add(
-                displayConsonant);
+                if (nonPulmonic == null)
+                {
+                    noMatchingPhonemeLabel.Visible =
+                        true;
 
-            RefreshConsonantChart();
+                    addPhonemeButton.Enabled =
+                        false;
+
+                    return;
+                }
+
+                ConsonantPhoneme projectConsonant =
+                    new()
+                    {
+                        Symbol =
+                            nonPulmonic.Symbol,
+
+                        Category =
+                            nonPulmonic.Category,
+
+                        Description =
+                            nonPulmonic.Description
+                    };
+
+                project.Phonology.Consonants.Add(
+                    projectConsonant);
+
+                consonantList.Items.Add(
+                    new ConsonantEntry
+                    {
+                        Symbol =
+                            projectConsonant.Symbol,
+
+                        Category =
+                            projectConsonant.Category,
+
+                        Description =
+                            projectConsonant.Description
+                    });
+
+                // 非肺部辅音不加入普通肺部辅音表。
+                // 但刷新不会有副作用。
+                RefreshConsonantChart();
+            }
         }
 
         // 添加元音
         else
         {
-            // 必须从 IPA 数据库中找到对应元音。
             IpaVowel? ipaVowel =
                 IpaVowels.All.FirstOrDefault(
                     x => x.Symbol == phoneme);
 
             if (ipaVowel == null)
             {
-                noMatchingPhonemeLabel.Visible = true;
-                addPhonemeButton.Enabled = false;
+                noMatchingPhonemeLabel.Visible =
+                    true;
+
+                addPhonemeButton.Enabled =
+                    false;
 
                 return;
             }
 
-            // 防止重复添加。
             if (project.Phonology.Vowels.Any(
                 x => x.Symbol == phoneme))
             {
                 return;
             }
 
-            // 属性直接来自 IPA 参考数据库。
-            VowelPhoneme projectVowel = new()
-            {
-                Symbol = ipaVowel.Symbol,
-                Height = ipaVowel.Height,
-                Backness = ipaVowel.Backness,
-                Roundedness = ipaVowel.Roundedness
-            };
+            VowelPhoneme projectVowel =
+                new()
+                {
+                    Symbol = ipaVowel.Symbol,
+                    Height = ipaVowel.Height,
+                    Backness = ipaVowel.Backness,
+                    Roundedness =
+                        ipaVowel.Roundedness
+                };
 
             project.Phonology.Vowels.Add(
                 projectVowel);
 
-            VowelEntry displayVowel = new()
-            {
-                Symbol = projectVowel.Symbol,
-                Height = projectVowel.Height,
-                Backness = projectVowel.Backness,
-                Roundedness = projectVowel.Roundedness
-            };
-
             vowelList.Items.Add(
-                displayVowel);
+                new VowelEntry
+                {
+                    Symbol =
+                        projectVowel.Symbol,
+
+                    Height =
+                        projectVowel.Height,
+
+                    Backness =
+                        projectVowel.Backness,
+
+                    Roundedness =
+                        projectVowel.Roundedness
+                });
 
             RefreshVowelChart();
         }
 
-        // 通知主窗口：项目已经修改。
         projectModified?.Invoke();
 
         phonemeInput.Clear();
