@@ -804,6 +804,17 @@ public class PhonologyPage : UserControl
             ipaCategory.Enabled = true;
             ipaChoice.Enabled = true;
             LoadVowelCategories();
+
+            IpaVowel? currentVowel = FindVowelFromInput();
+
+            if (currentVowel != null)
+            {
+                SelectGuidedVowel(currentVowel);
+            }
+            else
+            {
+                UpdateVowelSymbolFromFeatures();
+            }
         }
     }
 
@@ -1094,7 +1105,7 @@ public class PhonologyPage : UserControl
         isSynchronizingSelection = wasSynchronizing;
     }
 
-    // 把一个元音同步到输入框和三个元音属性框。
+    // 把一个元音同步到输入框、属性框和两种 IPA 选择器。
     private void ApplyVowel(IpaVowel vowel)
     {
         bool wasSynchronizing = isSynchronizingSelection;
@@ -1106,6 +1117,9 @@ public class PhonologyPage : UserControl
         vowelHeight.SelectedItem = vowel.Height;
         vowelBackness.SelectedItem = vowel.Backness;
         vowelRoundedness.SelectedItem = vowel.Roundedness;
+
+        SelectListVowel(vowel);
+        SelectGuidedVowel(vowel);
 
         isSynchronizingSelection = wasSynchronizing;
     }
@@ -1123,6 +1137,42 @@ public class PhonologyPage : UserControl
             {
                 ipaSymbolPicker.SelectedIndex = index;
                 lastIpaSymbolIndex = index;
+                break;
+            }
+        }
+
+        isSynchronizingSelection = wasSynchronizing;
+    }
+
+    // 在引导模式的类别和具体音素下拉栏中定位指定元音。
+    private void SelectGuidedVowel(IpaVowel vowel)
+    {
+        bool wasSynchronizing = isSynchronizingSelection;
+        isSynchronizingSelection = true;
+
+        if (!ipaCategory.Items.OfType<IpaVowelCategoryItem>().Any())
+        {
+            LoadVowelCategories();
+        }
+
+        for (int index = 0; index < ipaCategory.Items.Count; index++)
+        {
+            if (ipaCategory.Items[index] is IpaVowelCategoryItem category &&
+                category.Height == vowel.Height)
+            {
+                ipaCategory.SelectedIndex = index;
+                break;
+            }
+        }
+
+        PopulateGuidedVowelChoices(vowel.Height);
+
+        for (int index = 0; index < ipaChoice.Items.Count; index++)
+        {
+            if (ipaChoice.Items[index] is IpaDisplayItem item &&
+                item.Vowel?.Symbol == vowel.Symbol)
+            {
+                ipaChoice.SelectedIndex = index;
                 break;
             }
         }
