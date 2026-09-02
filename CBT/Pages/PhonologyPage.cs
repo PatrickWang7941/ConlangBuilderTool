@@ -26,6 +26,10 @@ public class PhonologyPage : UserControl
     private readonly TableLayoutPanel consonantChart = new();
     private readonly Dictionary<(string Place, string Manner, string Voicing), Label>
         consonantChartCells = new();
+    // 非肺部气流辅音表
+    private readonly TableLayoutPanel nonPulmonicChart = new();
+    private readonly Dictionary<string, Label>
+        nonPulmonicChartCells = new();
 
     // 元音控件
     private readonly ComboBox vowelHeight = new();
@@ -326,7 +330,7 @@ public class PhonologyPage : UserControl
         section.Controls.Add(inputRow);
         section.Controls.Add(phonemeLists);
         section.Controls.Add(BuildConsonantChart());
-        section.Controls.Add(BuildVowelChart());
+        section.Controls.Add(BuildLowerChartsRow());
         section.Controls.Add(bottomSpacer);
 
         return section;
@@ -357,6 +361,7 @@ public class PhonologyPage : UserControl
     {
         ipaSymbolPicker.DropDownStyle = ComboBoxStyle.DropDownList;
         ipaSymbolPicker.Width = 250;
+        ipaSymbolPicker.DropDownWidth = 560;
         ipaSymbolPicker.Font = new Font("Microsoft YaHei UI", 10);
         ipaSymbolPicker.Margin = new Padding(0, 3, 6, 0);
 
@@ -427,6 +432,7 @@ public class PhonologyPage : UserControl
 
         ipaChoice.DropDownStyle = ComboBoxStyle.DropDownList;
         ipaChoice.Width = 240;
+        ipaChoice.DropDownWidth = 560;
         ipaChoice.Font = new Font("Microsoft YaHei UI", 10);
         ipaChoice.Margin = new Padding(0, 3, 6, 0);
 
@@ -815,18 +821,221 @@ public class PhonologyPage : UserControl
 
         return chartContainer;
     }
+    // 创建页面底部的一行：
+    // 左侧为元音图，右侧为非肺部气流辅音表。
+    private Control BuildLowerChartsRow()
+    {
+        TableLayoutPanel row = new()
+        {
+            Width = 1480,
+            Height = 430,
+            ColumnCount = 2,
+            RowCount = 1,
+            Margin = new Padding(0, 20, 0, 25),
+            GrowStyle = TableLayoutPanelGrowStyle.FixedSize
+        };
 
+        row.ColumnStyles.Add(
+            new ColumnStyle(
+                SizeType.Absolute,
+                800));
+
+        row.ColumnStyles.Add(
+            new ColumnStyle(
+                SizeType.Absolute,
+                560));
+
+        row.RowStyles.Add(
+            new RowStyle(
+                SizeType.Absolute,
+                430));
+
+        Control vowelArea =
+            BuildVowelChart();
+
+        vowelArea.Margin =
+            new Padding(0);
+
+        Control nonPulmonicArea =
+            BuildNonPulmonicChart();
+
+        nonPulmonicArea.Margin =
+            new Padding(20, 0, 0, 0);
+
+        row.Controls.Add(
+            vowelArea,
+            0,
+            0);
+
+        row.Controls.Add(
+            nonPulmonicArea,
+            1,
+            0);
+
+        return row;
+    }
+
+    // 创建独立的非肺部气流辅音音系表。
+    private Control BuildNonPulmonicChart()
+    {
+        Panel container = new()
+        {
+            Width = 650,
+            Height = 400,
+            Margin = new Padding(0)
+        };
+
+        Label title = new()
+        {
+            Text =
+                "非肺部气流辅音  Non-pulmonic consonants",
+
+            Location =
+                new Point(0, 10),
+
+            AutoSize = true,
+
+            Font = new Font(
+                "Microsoft YaHei UI",
+                11,
+                FontStyle.Bold)
+        };
+
+        string[] categoryKeys =
+        {
+        "搭嘴音  Click",
+        "浊内爆音  Voiced implosive",
+        "挤喉音  Ejective"
+    };
+
+        string[] categoryTitles =
+        {
+        "搭嘴音\nClicks",
+        "浊内爆音\nVoiced implosives",
+        "挤喉音\nEjectives"
+    };
+
+        nonPulmonicChart.Controls.Clear();
+        nonPulmonicChart.ColumnStyles.Clear();
+        nonPulmonicChart.RowStyles.Clear();
+        nonPulmonicChartCells.Clear();
+
+        nonPulmonicChart.Location =
+            new Point(0, 45);
+
+        nonPulmonicChart.Size =
+            new Size(650, 300);
+
+        nonPulmonicChart.ColumnCount = 3;
+        nonPulmonicChart.RowCount = 2;
+
+        nonPulmonicChart.GrowStyle =
+            TableLayoutPanelGrowStyle.FixedSize;
+
+        nonPulmonicChart.CellBorderStyle =
+            TableLayoutPanelCellBorderStyle.Single;
+
+        nonPulmonicChart.ColumnStyles.Add(
+            new ColumnStyle(
+                SizeType.Percent,
+                33.333f));
+
+        nonPulmonicChart.ColumnStyles.Add(
+            new ColumnStyle(
+                SizeType.Percent,
+                33.333f));
+
+        nonPulmonicChart.ColumnStyles.Add(
+            new ColumnStyle(
+                SizeType.Percent,
+                33.334f));
+
+        nonPulmonicChart.RowStyles.Add(
+            new RowStyle(
+                SizeType.Absolute,
+                50));
+
+        nonPulmonicChart.RowStyles.Add(
+            new RowStyle(
+                SizeType.Percent,
+                100));
+
+        for (int column = 0;
+             column < categoryKeys.Length;
+             column++)
+        {
+            string categoryKey =
+                categoryKeys[column];
+
+            Label header = new()
+            {
+                Text =
+                    categoryTitles[column],
+
+                Dock =
+                    DockStyle.Fill,
+
+                TextAlign =
+                    ContentAlignment.MiddleCenter,
+
+                Font = new Font(
+                    "Microsoft YaHei UI",
+                    9,
+                    FontStyle.Bold)
+            };
+
+            Label content = new()
+            {
+                Text = "",
+
+                Dock =
+                    DockStyle.Fill,
+
+                TextAlign =
+                    ContentAlignment.TopLeft,
+
+                Font = new Font(
+                    "Microsoft YaHei UI",
+                    11),
+
+                Padding =
+                    new Padding(
+                        10,
+                        10,
+                        6,
+                        6)
+            };
+
+            nonPulmonicChart.Controls.Add(
+                header,
+                column,
+                0);
+
+            nonPulmonicChart.Controls.Add(
+                content,
+                column,
+                1);
+
+            nonPulmonicChartCells[
+                categoryKey] = content;
+        }
+
+        container.Controls.Add(title);
+        container.Controls.Add(nonPulmonicChart);
+
+        return container;
+    }
     // 创建 IPA 风格的元音梯形图。
     private Control BuildVowelChart()
     {
         Panel chartContainer = new()
         {
-            Width = 1000,
-            Height = 430,
-            Margin = new Padding(0, 20, 0, 25)
+            Width = 800,
+            Height = 400,
+            Margin = new Padding(0)
         };
 
-        vowelChart.Size = new Size(900, 390);
+        vowelChart.Size = new Size(790, 390);
         vowelChart.Location = new Point(0, 0);
 
         vowelChartCells.Clear();
@@ -1620,7 +1829,8 @@ public class PhonologyPage : UserControl
             return;
         }
 
-        string input = phonemeInput.Text.Trim();
+        string input =
+            phonemeInput.Text.Trim();
 
         // 输入框为空时，不显示错误，
         // 但不能允许添加音素。
@@ -1640,48 +1850,59 @@ public class PhonologyPage : UserControl
             IpaConsonant? consonant =
                 FindConsonantFromInput();
 
-            if (consonant == null)
+            // 首先检查普通肺部辅音。
+            if (consonant != null)
             {
-                IpaNonPulmonicConsonant? nonPulmonic =
-                    FindNonPulmonicConsonantFromInput();
+                noMatchingPhonemeLabel.Visible = false;
+                addPhonemeButton.Enabled = true;
 
-                // 如果属于 IPA 2015 的非肺部辅音，
-                // 允许添加，但不尝试填写普通辅音属性框。
-                if (nonPulmonic != null)
-                {
-                    noMatchingPhonemeLabel.Visible = false;
-                    addPhonemeButton.Enabled = true;
-
-                    return;
-                }
-
-                ClearIpaSelections();
-
-                noMatchingPhonemeLabel.Visible = true;
-                addPhonemeButton.Enabled = false;
+                ApplyConsonant(consonant);
 
                 return;
             }
 
-            // 元音
-            IpaVowel? vowel =
+            // 再检查非肺部气流辅音。
+            IpaNonPulmonicConsonant? nonPulmonic =
+                FindNonPulmonicConsonantFromInput();
+
+            if (nonPulmonic != null)
+            {
+                ClearIpaSelections();
+
+                noMatchingPhonemeLabel.Visible = false;
+                addPhonemeButton.Enabled = true;
+
+                return;
+            }
+
+            // 两个数据库都没有找到。
+            ClearIpaSelections();
+
+            noMatchingPhonemeLabel.Visible = true;
+            addPhonemeButton.Enabled = false;
+
+            return;
+        }
+
+        // 元音
+        IpaVowel? vowel =
             FindVowelFromInput();
 
-            if (vowel == null)
-            {
-                ClearIpaSelections();
+        if (vowel == null)
+        {
+            ClearIpaSelections();
 
-                noMatchingPhonemeLabel.Visible = true;
-                addPhonemeButton.Enabled = false;
+            noMatchingPhonemeLabel.Visible = true;
+            addPhonemeButton.Enabled = false;
 
-                return;
-            }
-
-            noMatchingPhonemeLabel.Visible = false;
-            addPhonemeButton.Enabled = true;
-
-            ApplyVowel(vowel);
+            return;
         }
+
+        noMatchingPhonemeLabel.Visible = false;
+        addPhonemeButton.Enabled = true;
+
+        ApplyVowel(vowel);
+    }
 
     // 清除两个 IPA 选择器中的当前选择和历史索引。
     private void ClearIpaSelections()
@@ -1696,12 +1917,15 @@ public class PhonologyPage : UserControl
         isSynchronizingSelection = wasSynchronizing;
     }
     // 把项目中的音系数据加载到页面控件。
+    // 把项目中的音系数据加载到页面控件。
     private void LoadProjectPhonology()
     {
         consonantList.Items.Clear();
         vowelList.Items.Clear();
 
-        foreach (ConsonantPhoneme consonant in project.Phonology.Consonants)
+        foreach (
+            ConsonantPhoneme consonant
+            in project.Phonology.Consonants)
         {
             consonantList.Items.Add(
                 new ConsonantEntry
@@ -1712,10 +1936,12 @@ public class PhonologyPage : UserControl
                     Voicing = consonant.Voicing,
                     Category = consonant.Category,
                     Description = consonant.Description
-                }
+                });
         }
 
-        foreach (VowelPhoneme vowel in project.Phonology.Vowels)
+        foreach (
+            VowelPhoneme vowel
+            in project.Phonology.Vowels)
         {
             vowelList.Items.Add(
                 new VowelEntry
@@ -1728,6 +1954,7 @@ public class PhonologyPage : UserControl
         }
 
         RefreshConsonantChart();
+        RefreshNonPulmonicChart();
         RefreshVowelChart();
     }
     // 把当前输入的音素加入项目。
@@ -1841,8 +2068,8 @@ public class PhonologyPage : UserControl
                     });
 
                 // 非肺部辅音不加入普通肺部辅音表。
-                // 但刷新不会有副作用。
-                RefreshConsonantChart();
+                // 但刷新不会报错，能跑
+                RefreshNonPulmonicChart();
             }
         }
 
@@ -1919,6 +2146,7 @@ public class PhonologyPage : UserControl
             consonantList.Items.Remove(consonant);
 
             RefreshConsonantChart();
+            RefreshNonPulmonicChart();
             projectModified?.Invoke();
 
             return;
@@ -1966,7 +2194,57 @@ public class PhonologyPage : UserControl
             cell.Font = new Font("Microsoft YaHei UI", 12);
         }
     }
+    // 根据项目中的非肺部气流辅音刷新右侧独立表格。
+    private void RefreshNonPulmonicChart()
+    {
+        foreach (
+            Label cell
+            in nonPulmonicChartCells.Values)
+        {
+            cell.Text = "";
+        }
 
+        foreach (
+            ConsonantPhoneme consonant
+            in project.Phonology.Consonants)
+        {
+            if (string.IsNullOrWhiteSpace(
+                consonant.Category))
+            {
+                continue;
+            }
+
+            if (!nonPulmonicChartCells.TryGetValue(
+                consonant.Category,
+                out Label? cell))
+            {
+                continue;
+            }
+
+            string description =
+                string.IsNullOrWhiteSpace(
+                    consonant.Description)
+                ? ""
+                : GetChinesePart(
+                    consonant.Description);
+
+            string line =
+                description.Length == 0
+                ? consonant.Symbol
+                : $"{consonant.Symbol}    {description}";
+
+            if (cell.Text.Length == 0)
+            {
+                cell.Text = line;
+            }
+            else
+            {
+                cell.Text +=
+                    Environment.NewLine +
+                    line;
+            }
+        }
+    }
     // 把辅音类别转换成适合下拉栏显示的双语复数名称。
     private static string GetCategoryDisplayName(string manner)
     {
