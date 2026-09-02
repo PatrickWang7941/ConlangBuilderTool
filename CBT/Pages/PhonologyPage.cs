@@ -1231,87 +1231,134 @@ public class PhonologyPage : UserControl
                 12);
 
 
-        // 记录鼠标按下之前选中了哪一项。
-        // 用于判断用户是不是再次点击同一个项目。
-        int consonantSelectionBeforeClick = -1;
-        int vowelSelectionBeforeClick = -1;
+        // 记录上一次真正完成点击选择的项目。
+        // 不再使用 MouseDown 时的 SelectedIndex，
+        // 因为 WinForms 可能已经在 MouseDown 前更新了选择。
+        int lastConsonantClickedIndex = -1;
+        int lastVowelClickedIndex = -1;
 
 
-        consonantList.MouseDown +=
+        // 如果选择通过键盘、删除或其他方式发生改变，
+        // 就取消之前的“再次点击”记录。
+        consonantList.SelectedIndexChanged +=
             (sender, e) =>
             {
-                consonantSelectionBeforeClick =
-                    consonantList.SelectedIndex;
+                if (consonantList.SelectedIndex !=
+                    lastConsonantClickedIndex)
+                {
+                    lastConsonantClickedIndex = -1;
+                }
             };
 
 
-        consonantList.MouseUp +=
+        vowelList.SelectedIndexChanged +=
             (sender, e) =>
             {
+                if (vowelList.SelectedIndex !=
+                    lastVowelClickedIndex)
+                {
+                    lastVowelClickedIndex = -1;
+                }
+            };
+
+
+        consonantList.MouseClick +=
+            (sender, e) =>
+            {
+                if (e.Button != MouseButtons.Left)
+                {
+                    return;
+                }
+
                 int clickedIndex =
                     consonantList.IndexFromPoint(
                         e.Location);
 
 
-                // 点击空白区域时取消选择。
+                // 点击清单空白处：取消选择。
                 if (clickedIndex == ListBox.NoMatches)
                 {
                     consonantList.ClearSelected();
+                    lastConsonantClickedIndex = -1;
+
                     return;
                 }
 
 
-                // 再次点击已经选中的音素：
+                // 再次点击当前已经选中的同一个辅音：
                 // 取消选择。
                 if (clickedIndex ==
-                    consonantSelectionBeforeClick)
+                        lastConsonantClickedIndex &&
+                    consonantList.SelectedIndex ==
+                        clickedIndex)
                 {
                     consonantList.ClearSelected();
+                    lastConsonantClickedIndex = -1;
+
                     return;
                 }
 
 
-                // 选择辅音时取消元音的选择。
+                // 第一次点击或者切换到另一项：
+                // 正常保持蓝色选择状态。
+                consonantList.SelectedIndex =
+                    clickedIndex;
+
+                lastConsonantClickedIndex =
+                    clickedIndex;
+
+
+                // 辅音和元音清单不能同时保持选择。
                 vowelList.ClearSelected();
+                lastVowelClickedIndex = -1;
             };
 
-
-        vowelList.MouseDown +=
+        vowelList.MouseClick +=
             (sender, e) =>
             {
-                vowelSelectionBeforeClick =
-                    vowelList.SelectedIndex;
-            };
+                if (e.Button != MouseButtons.Left)
+                {
+                    return;
+                }
 
-
-        vowelList.MouseUp +=
-            (sender, e) =>
-            {
                 int clickedIndex =
                     vowelList.IndexFromPoint(
                         e.Location);
 
-
-                // 点击空白区域时取消选择。
+                // 点击清单空白处：取消选择。
                 if (clickedIndex == ListBox.NoMatches)
                 {
                     vowelList.ClearSelected();
+                    lastVowelClickedIndex = -1;
+
                     return;
                 }
 
-
-                // 再次点击已经选中的元音：
+                // 再次点击当前已经选中的同一个元音：
                 // 取消选择。
                 if (clickedIndex ==
-                    vowelSelectionBeforeClick)
+                        lastVowelClickedIndex &&
+                    vowelList.SelectedIndex ==
+                        clickedIndex)
                 {
                     vowelList.ClearSelected();
+                    lastVowelClickedIndex = -1;
+
                     return;
                 }
 
+                // 第一次点击或者切换到另一项：
+                // 正常保持蓝色选择状态。
+                vowelList.SelectedIndex =
+                    clickedIndex;
 
-                // 选择元音时取消辅音的选择。
+                lastVowelClickedIndex =
+                    clickedIndex;
+
+
+                // 辅音和元音清单不能同时保持选择。
                 consonantList.ClearSelected();
+                lastConsonantClickedIndex = -1;
             };
     }
 
@@ -2786,6 +2833,8 @@ public class PhonologyPage : UserControl
     }
 
 
+    // 把普通辅音同步到输入框和各个选择器。
+    // 成功选择普通辅音时，同时清除旧的错误状态。
     private void ApplyConsonant(
         IpaConsonant consonant)
     {
@@ -2825,6 +2874,15 @@ public class PhonologyPage : UserControl
 
         isSynchronizingSelection =
             wasSynchronizing;
+
+
+        // 这是数据库中已经确认存在的 IPA 音素。
+        // 必须清除之前残留的“无此音素”状态。
+        noMatchingPhonemeLabel.Visible =
+            false;
+
+        addPhonemeButton.Enabled =
+            true;
     }
 
 
@@ -3247,6 +3305,8 @@ public class PhonologyPage : UserControl
     }
 
 
+    // 把元音同步到输入框和各个选择器。
+    // 成功选择元音时，同时清除旧的错误状态。
     private void ApplyVowel(
         IpaVowel vowel)
     {
@@ -3256,6 +3316,9 @@ public class PhonologyPage : UserControl
         isSynchronizingSelection =
             true;
 
+
+        phonemeType.SelectedIndex =
+            1;
 
         phonemeInput.Text =
             vowel.Symbol;
@@ -3283,6 +3346,14 @@ public class PhonologyPage : UserControl
 
         isSynchronizingSelection =
             wasSynchronizing;
+
+
+        // 这是数据库中已经确认存在的 IPA 元音。
+        noMatchingPhonemeLabel.Visible =
+            false;
+
+        addPhonemeButton.Enabled =
+            true;
     }
 
 
