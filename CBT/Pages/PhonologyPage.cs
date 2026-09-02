@@ -52,23 +52,27 @@ public class PhonologyPage : UserControl
         public IpaConsonant? Consonant { get; }
         public IpaVowel? Vowel { get; }
 
+        // 创建只显示文字、不关联具体音素的分组标题。
         public IpaDisplayItem(string text)
         {
             Text = text;
         }
 
+        // 创建关联辅音数据的下拉栏项目。
         public IpaDisplayItem(string text, IpaConsonant consonant)
         {
             Text = text;
             Consonant = consonant;
         }
 
+        // 创建关联元音数据的下拉栏项目。
         public IpaDisplayItem(string text, IpaVowel vowel)
         {
             Text = text;
             Vowel = vowel;
         }
 
+        // 让下拉栏直接显示项目的双语说明文字。
         public override string ToString()
         {
             return Text;
@@ -80,12 +84,14 @@ public class PhonologyPage : UserControl
         public string Manner { get; }
         public string Text { get; }
 
+        // 保存引导模式中的辅音类别及其显示文字。
         public IpaCategoryItem(string manner, string text)
         {
             Manner = manner;
             Text = text;
         }
 
+        // 返回辅音类别在下拉栏中的显示文字。
         public override string ToString()
         {
             return Text;
@@ -97,12 +103,14 @@ public class PhonologyPage : UserControl
         public string Height { get; }
         public string Text { get; }
 
+        // 保存引导模式中的元音高度类别及其显示文字。
         public IpaVowelCategoryItem(string height, string text)
         {
             Height = height;
             Text = text;
         }
 
+        // 返回元音类别在下拉栏中的显示文字。
         public override string ToString()
         {
             return Text;
@@ -117,6 +125,7 @@ public class PhonologyPage : UserControl
         public string Manner { get; set; } = "";
         public string Voicing { get; set; } = "";
 
+        // 把辅音符号和主要属性组合成清单中的简短说明。
         public override string ToString()
         {
             string place = Place.Split("  ")[0];
@@ -127,6 +136,7 @@ public class PhonologyPage : UserControl
         }
     }
 
+    // 初始化页面布局并创建音素清单区域。
     public PhonologyPage()
     {
         Dock = DockStyle.Fill;
@@ -153,6 +163,7 @@ public class PhonologyPage : UserControl
         Controls.Add(contentPanel);
     }
 
+    // 组装输入区、音素清单和辅音音系表的整体界面。
     private Control BuildPhonemeInventory()
     {
         FlowLayoutPanel section = new()
@@ -245,6 +256,7 @@ public class PhonologyPage : UserControl
         return section;
     }
 
+    // 配置三种 IPA 选择模式之间的循环切换按钮。
     private void ConfigureSelectionModeButton()
     {
         selectionModeButton.Text = "切换到引导模式";
@@ -264,6 +276,7 @@ public class PhonologyPage : UserControl
         };
     }
 
+    // 配置列表模式的 IPA 下拉栏及其选择事件。
     private void ConfigureIpaSymbolPicker()
     {
         ipaSymbolPicker.DropDownStyle = ComboBoxStyle.DropDownList;
@@ -305,6 +318,7 @@ public class PhonologyPage : UserControl
         };
     }
 
+    // 配置辅音与元音类型选择器，并在类型变化时刷新当前模式。
     private void ConfigurePhonemeType()
     {
         phonemeType.Items.Add("辅音  Consonant");
@@ -317,6 +331,7 @@ public class PhonologyPage : UserControl
         phonemeType.SelectedIndexChanged += (sender, e) => UpdateSelectionMode();
     }
 
+    // 配置引导模式的类别和具体 IPA 两级选择器。
     private void ConfigureGuidedIpaPickers()
     {
         ipaCategory.DropDownStyle = ComboBoxStyle.DropDownList;
@@ -371,6 +386,7 @@ public class PhonologyPage : UserControl
         };
     }
 
+    // 配置辅音的发音部位、发音方法和清浊属性选择器。
     private void ConfigureConsonantFeatureSelectors()
     {
         consonantPlace.Items.AddRange(new object[]
@@ -434,6 +450,7 @@ public class PhonologyPage : UserControl
         consonantVoicing.Margin = new Padding(0, 3, 6, 0);
     }
 
+    // 配置元音的高度、前后度和圆唇属性选择器。
     private void ConfigureVowelFeatureSelectors()
     {
         vowelHeight.Items.AddRange(new object[]
@@ -486,6 +503,7 @@ public class PhonologyPage : UserControl
             (sender, e) => UpdateVowelSymbolFromFeatures();
     }
 
+    // 配置音素输入框，并在手动输入时尝试识别 IPA 属性。
     private void ConfigurePhonemeInput()
     {
         phonemeInput.Width = 180;
@@ -494,6 +512,7 @@ public class PhonologyPage : UserControl
         phonemeInput.TextChanged += (sender, e) => UpdateFeaturesFromSymbol();
     }
 
+    // 配置音素的添加和删除按钮及其点击事件。
     private void ConfigureActionButtons()
     {
         addPhonemeButton.Text = "添加";
@@ -511,6 +530,7 @@ public class PhonologyPage : UserControl
         removePhonemeButton.Click += RemovePhoneme;
     }
 
+    // 配置辅音与元音清单的尺寸和字体。
     private void ConfigurePhonemeLists()
     {
         consonantList.Size = new Size(500, 180);
@@ -520,6 +540,7 @@ public class PhonologyPage : UserControl
         vowelList.Font = new Font("Microsoft YaHei UI", 12);
     }
 
+    // 配置找不到属性组合时显示的提示标签。
     private void ConfigureNoMatchingPhonemeLabel()
     {
         noMatchingPhonemeLabel.Text = "无此音素  No corresponding phoneme";
@@ -529,6 +550,7 @@ public class PhonologyPage : UserControl
         noMatchingPhonemeLabel.Visible = false;
     }
 
+    // 创建按发音方法、部位和清浊排列的辅音音系表。
     private Control BuildConsonantChart()
     {
         Panel chartContainer = new()
@@ -694,6 +716,7 @@ public class PhonologyPage : UserControl
         return chartContainer;
     }
 
+    // 根据音素类型和选择模式切换可见控件，并同步当前音素。
     private void UpdateSelectionMode()
     {
         bool isConsonant = phonemeType.SelectedIndex == 0;
@@ -784,6 +807,7 @@ public class PhonologyPage : UserControl
         }
     }
 
+    // 把全部辅音按发音方法分组加载到列表模式下拉栏。
     private void LoadDetailedIpaPicker()
     {
         ipaSymbolPicker.BeginUpdate();
@@ -810,6 +834,7 @@ public class PhonologyPage : UserControl
         ipaSymbolPicker.EndUpdate();
     }
 
+    // 把辅音的发音方法加载为引导模式的一级类别。
     private void LoadConsonantCategories()
     {
         bool wasSynchronizing = isSynchronizingSelection;
@@ -833,6 +858,7 @@ public class PhonologyPage : UserControl
         isSynchronizingSelection = wasSynchronizing;
     }
 
+    // 根据选中的发音方法加载引导模式中的具体辅音。
     private void PopulateGuidedChoices(string manner)
     {
         bool wasSynchronizing = isSynchronizingSelection;
@@ -856,6 +882,7 @@ public class PhonologyPage : UserControl
         isSynchronizingSelection = wasSynchronizing;
     }
 
+    // 从元音类别切回辅音时，确保辅音类别已经重新加载。
     private void EnsureConsonantCategories()
     {
         if (ipaCategory.Items.OfType<IpaCategoryItem>().Any())
@@ -866,7 +893,7 @@ public class PhonologyPage : UserControl
         LoadConsonantCategories();
     }
 
-    // 把辅音同步到输入框、属性框和 IPA 选择器。
+    // 把一个辅音同步到输入框、属性框和两种 IPA 选择器。
     private void ApplyConsonant(IpaConsonant consonant)
     {
         bool wasSynchronizing = isSynchronizingSelection;
@@ -886,6 +913,7 @@ public class PhonologyPage : UserControl
         isSynchronizingSelection = wasSynchronizing;
     }
 
+    // 在列表模式下拉栏中定位指定辅音。
     private void SelectDetailedConsonant(IpaConsonant consonant)
     {
         bool wasSynchronizing = isSynchronizingSelection;
@@ -905,6 +933,7 @@ public class PhonologyPage : UserControl
         isSynchronizingSelection = wasSynchronizing;
     }
 
+    // 在引导模式的类别和具体音素下拉栏中定位指定辅音。
     private void SelectGuidedConsonant(IpaConsonant consonant)
     {
         bool wasSynchronizing = isSynchronizingSelection;
@@ -937,6 +966,7 @@ public class PhonologyPage : UserControl
         isSynchronizingSelection = wasSynchronizing;
     }
 
+    // 根据输入框中的符号查找对应的辅音数据。
     private IpaConsonant? FindConsonantFromInput()
     {
         string symbol = NormalizeInputSymbol(phonemeInput.Text.Trim());
@@ -944,11 +974,13 @@ public class PhonologyPage : UserControl
         return IpaConsonants.All.FirstOrDefault(x => x.Symbol == symbol);
     }
 
+    // 把普通拉丁字母 g 统一为 IPA 使用的单层 ɡ。
     private static string NormalizeInputSymbol(string symbol)
     {
         return symbol == "g" ? "ɡ" : symbol;
     }
 
+    // 根据当前辅音属性查找 IPA 符号，并更新输入与提示状态。
     private void UpdateSymbolFromFeatures()
     {
         if (isSynchronizingSelection || phonemeType.SelectedIndex != 0)
@@ -980,6 +1012,7 @@ public class PhonologyPage : UserControl
         ApplyConsonant(match);
     }
 
+    // 把全部元音按高度分组加载到列表模式下拉栏。
     private void LoadVowelListPicker()
     {
         bool wasSynchronizing = isSynchronizingSelection;
@@ -1011,6 +1044,7 @@ public class PhonologyPage : UserControl
         isSynchronizingSelection = wasSynchronizing;
     }
 
+    // 把元音高度加载为引导模式的一级类别。
     private void LoadVowelCategories()
     {
         bool wasSynchronizing = isSynchronizingSelection;
@@ -1036,6 +1070,7 @@ public class PhonologyPage : UserControl
         isSynchronizingSelection = wasSynchronizing;
     }
 
+    // 根据选中的元音高度加载引导模式中的具体元音。
     private void PopulateGuidedVowelChoices(string height)
     {
         bool wasSynchronizing = isSynchronizingSelection;
@@ -1059,7 +1094,7 @@ public class PhonologyPage : UserControl
         isSynchronizingSelection = wasSynchronizing;
     }
 
-    // 把元音同步到输入框和属性框。
+    // 把一个元音同步到输入框和三个元音属性框。
     private void ApplyVowel(IpaVowel vowel)
     {
         bool wasSynchronizing = isSynchronizingSelection;
@@ -1075,6 +1110,7 @@ public class PhonologyPage : UserControl
         isSynchronizingSelection = wasSynchronizing;
     }
 
+    // 在列表模式下拉栏中定位指定元音。
     private void SelectListVowel(IpaVowel vowel)
     {
         bool wasSynchronizing = isSynchronizingSelection;
@@ -1094,6 +1130,7 @@ public class PhonologyPage : UserControl
         isSynchronizingSelection = wasSynchronizing;
     }
 
+    // 根据输入框中的符号查找对应的元音数据。
     private IpaVowel? FindVowelFromInput()
     {
         string symbol = phonemeInput.Text.Trim();
@@ -1101,6 +1138,7 @@ public class PhonologyPage : UserControl
         return IpaVowels.All.FirstOrDefault(x => x.Symbol == symbol);
     }
 
+    // 根据当前元音属性查找 IPA 符号，并更新输入与提示状态。
     private void UpdateVowelSymbolFromFeatures()
     {
         if (isSynchronizingSelection || phonemeType.SelectedIndex != 1)
@@ -1131,6 +1169,7 @@ public class PhonologyPage : UserControl
         ApplyVowel(match);
     }
 
+    // 根据手动输入的 IPA 符号反向同步辅音或元音属性。
     private void UpdateFeaturesFromSymbol()
     {
         if (isSynchronizingSelection)
@@ -1162,6 +1201,7 @@ public class PhonologyPage : UserControl
         ApplyVowel(vowel);
     }
 
+    // 清除两个 IPA 选择器中的当前选择和历史索引。
     private void ClearIpaSelections()
     {
         bool wasSynchronizing = isSynchronizingSelection;
@@ -1174,6 +1214,7 @@ public class PhonologyPage : UserControl
         isSynchronizingSelection = wasSynchronizing;
     }
 
+    // 把当前输入的音素加入对应清单，并刷新辅音音系表。
     private void AddPhoneme(object? sender, EventArgs e)
     {
         string phoneme = phonemeInput.Text.Trim();
@@ -1216,6 +1257,7 @@ public class PhonologyPage : UserControl
         phonemeInput.Focus();
     }
 
+    // 删除当前选中的辅音或元音，并在需要时刷新音系表。
     private void RemovePhoneme(object? sender, EventArgs e)
     {
         // 优先删除辅音列表中的选中项。
@@ -1232,6 +1274,7 @@ public class PhonologyPage : UserControl
         }
     }
 
+    // 按辅音清单内容重新填充音系表中的对应单元格。
     private void RefreshConsonantChart()
     {
         foreach (Label cell in consonantChartCells.Values)
@@ -1262,6 +1305,7 @@ public class PhonologyPage : UserControl
         }
     }
 
+    // 把辅音类别转换成适合下拉栏显示的双语复数名称。
     private static string GetCategoryDisplayName(string manner)
     {
         return manner switch
@@ -1278,6 +1322,7 @@ public class PhonologyPage : UserControl
         };
     }
 
+    // 把元音高度转换成适合分组标题显示的双语名称。
     private static string GetVowelCategoryDisplayName(string height)
     {
         return height switch
@@ -1293,6 +1338,7 @@ public class PhonologyPage : UserControl
         };
     }
 
+    // 把辅音的清浊、部位和方法组合成中文简短说明。
     private static string GetConsonantDescription(IpaConsonant consonant)
     {
         string voicing = consonant.Voicing.StartsWith("清音") ? "清" : "浊";
@@ -1301,6 +1347,7 @@ public class PhonologyPage : UserControl
             $"{GetChinesePart(consonant.Manner)}";
     }
 
+    // 把元音的圆唇、前后度和高度组合成中文简短说明。
     private static string GetVowelDescription(IpaVowel vowel)
     {
         return $"{GetChinesePart(vowel.Roundedness)}" +
@@ -1308,6 +1355,7 @@ public class PhonologyPage : UserControl
             $"{GetChinesePart(vowel.Height)}元音";
     }
 
+    // 从双语属性文字中取出两个空格之前的中文部分。
     private static string GetChinesePart(string bilingualText)
     {
         int separatorIndex = bilingualText.IndexOf("  ", StringComparison.Ordinal);
