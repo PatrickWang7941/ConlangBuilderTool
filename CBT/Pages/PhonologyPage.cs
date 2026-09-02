@@ -17,6 +17,8 @@ public class PhonologyPage : UserControl
     private readonly ComboBox phonemeType = new();
     //IPA符号选择器，把无法正常从输入法输入的内容用热键转换成IPA
     private readonly ComboBox ipaSymbolPicker = new();
+    //没有匹配IPA时的提示
+    private readonly Label noMatchingPhonemeLabel = new();
     //音素选择模式
     private readonly Button selectionModeButton = new();
     //引导模式使用的分类和具体IPA选择器
@@ -32,6 +34,8 @@ public class PhonologyPage : UserControl
 
     //为什么自动生成这么多空行？VS？
     private readonly ListBox consonantList = new();
+    //辅音音系表生成
+    private readonly TableLayoutPanel consonantChart = new();
     private readonly ListBox vowelList = new();
     //下拉栏里的分组标题和IPA项目共用这个显示类型
     private class IpaDisplayItem
@@ -77,7 +81,11 @@ public class PhonologyPage : UserControl
 
         public override string ToString()
         {
-            return $"{Symbol}    {Place}    {Manner}    {Voicing}";
+            string place = Place.Split("  ")[0];
+            string manner = Manner.Split("  ")[0];
+            string voicing = Voicing.StartsWith("清音") ? "清" : "浊";
+
+            return $"{Symbol}    {place}{voicing}{manner}";
         }
     }
     public PhonologyPage()
@@ -157,6 +165,12 @@ public class PhonologyPage : UserControl
         ipaSymbolPicker.DropDownStyle = ComboBoxStyle.DropDownList;
         ipaSymbolPicker.Width = 250;
         ipaSymbolPicker.Font = new Font("Microsoft YaHei UI", 10);
+        //当没有对应IPA时的反馈
+        noMatchingPhonemeLabel.Text = "无此音素  No corresponding phoneme";
+        noMatchingPhonemeLabel.AutoSize = true;
+        noMatchingPhonemeLabel.Font = new Font("Microsoft YaHei UI", 9);
+        noMatchingPhonemeLabel.Margin = new Padding(8, 7, 0, 0);
+        noMatchingPhonemeLabel.Visible = false;
 
         //从IPA数据库读取按类别分组的符号和中文说明
         LoadDetailedIpaPicker();
@@ -345,6 +359,8 @@ public class PhonologyPage : UserControl
         inputRow.Controls.Add(ipaChoice);
         inputRow.Controls.Add(addPhonemeButton);
         inputRow.Controls.Add(removePhonemeButton);
+        //没有对应ipa
+        inputRow.Controls.Add(noMatchingPhonemeLabel);
 
         UpdateConsonantFields();
         UpdateSymbolFromFeatures();
@@ -353,11 +369,138 @@ public class PhonologyPage : UserControl
         section.Controls.Add(inputRow);
         section.Controls.Add(consonantTitle);
         section.Controls.Add(consonantList);
+        //辅音音系表
+        section.Controls.Add(BuildConsonantChart());
+
+        section.Controls.Add(vowelTitle);
+        section.Controls.Add(vowelList);
 
         section.Controls.Add(vowelTitle);
         section.Controls.Add(vowelList);
 
         return section;
+    }
+    //建立辅音音系表
+    private Control BuildConsonantChart()
+    {
+        Panel chartContainer = new();
+
+        chartContainer.Size = new Size(1450, 420);
+        chartContainer.AutoScroll = true;
+        chartContainer.Margin = new Padding(0, 15, 0, 25);
+
+        string[] places =
+        {
+        "双唇\nBilabial",
+        "唇齿\nLabiodental",
+        "齿\nDental",
+        "齿龈\nAlveolar",
+        "龈后\nPostalveolar",
+        "卷舌\nRetroflex",
+        "硬腭\nPalatal",
+        "软腭\nVelar",
+        "小舌\nUvular",
+        "咽\nPharyngeal",
+        "声门\nGlottal"
+    };
+
+        string[] manners =
+        {
+        "塞音\nPlosive",
+        "鼻音\nNasal",
+        "颤音\nTrill",
+        "闪音\nTap / Flap",
+        "擦音\nFricative",
+        "边擦音\nLateral fricative",
+        "近音\nApproximant",
+        "边近音\nLateral approximant"
+    };
+
+        consonantChart.Controls.Clear();
+
+        consonantChart.RowCount = manners.Length + 1;
+        consonantChart.ColumnCount = places.Length + 1;
+
+        consonantChart.AutoSize = true;
+        consonantChart.CellBorderStyle = TableLayoutPanelCellBorderStyle.Single;
+        consonantChart.Location = new Point(0, 0);
+
+        //左上角空白格
+        consonantChart.ColumnStyles.Add(
+            new ColumnStyle(SizeType.Absolute, 150));
+
+        //发音部位列
+        foreach (string place in places)
+        {
+            consonantChart.ColumnStyles.Add(
+                new ColumnStyle(SizeType.Absolute, 110));
+        }
+
+        //标题行
+        consonantChart.RowStyles.Add(
+            new RowStyle(SizeType.Absolute, 38));
+
+        for (int column = 0; column < places.Length; column++)
+        {
+            Label label = new();
+
+            label.Text = places[column];
+            label.Dock = DockStyle.Fill;
+            label.TextAlign = ContentAlignment.MiddleCenter;
+            label.Font = new Font("Microsoft YaHei UI", 9);
+
+            consonantChart.Controls.Add(label, column + 1, 0);
+        }
+
+        //发音方法行
+        for (int row = 0; row < manners.Length; row++)
+        {
+            consonantChart.RowStyles.Add(
+                new RowStyle(SizeType.Absolute, 45));
+
+            Label mannerLabel = new();
+
+            mannerLabel.Text = manners[row];
+            mannerLabel.Dock = DockStyle.Fill;
+            mannerLabel.TextAlign = ContentAlignment.MiddleCenter;
+            mannerLabel.Font = new Font("Microsoft YaHei UI", 9);
+
+            consonantChart.Controls.Add(mannerLabel, 0, row + 1);
+
+            //每个格子预留清音 / 浊音两个位置
+            for (int column = 0; column < places.Length; column++)
+            {
+                TableLayoutPanel cell = new();
+
+                cell.Dock = DockStyle.Fill;
+                cell.ColumnCount = 2;
+                cell.RowCount = 1;
+                cell.Margin = new Padding(0);
+
+                cell.ColumnStyles.Add(
+                    new ColumnStyle(SizeType.Percent, 50));
+
+                cell.ColumnStyles.Add(
+                    new ColumnStyle(SizeType.Percent, 50));
+
+                Label voiceless = new();
+                voiceless.Dock = DockStyle.Fill;
+                voiceless.TextAlign = ContentAlignment.MiddleCenter;
+
+                Label voiced = new();
+                voiced.Dock = DockStyle.Fill;
+                voiced.TextAlign = ContentAlignment.MiddleCenter;
+
+                cell.Controls.Add(voiceless, 0, 0);
+                cell.Controls.Add(voiced, 1, 0);
+
+                consonantChart.Controls.Add(cell, column + 1, row + 1);
+            }
+        }
+
+        chartContainer.Controls.Add(consonantChart);
+
+        return chartContainer;
     }
     //加载详细模式中的分组IPA清单
     private void LoadDetailedIpaPicker()
@@ -447,7 +590,7 @@ public class PhonologyPage : UserControl
         bool isConsonant = phonemeType.SelectedIndex == 0;
         IpaConsonant? currentConsonant = FindConsonantFromInput();
 
-        ipaSymbolPicker.Visible = isDetailedMode && isConsonant;
+        ipaSymbolPicker.Visible = false;
         consonantPlace.Visible = isDetailedMode && isConsonant;
         consonantManner.Visible = isDetailedMode && isConsonant;
         consonantVoicing.Visible = isDetailedMode && isConsonant;
@@ -600,11 +743,23 @@ public class PhonologyPage : UserControl
         {
             bool wasSynchronizing = isSynchronizingSelection;
             isSynchronizingSelection = true;
+
             phonemeInput.Clear();
+
             isSynchronizingSelection = wasSynchronizing;
+
             ClearIpaSelections();
+
+            noMatchingPhonemeLabel.Visible = true;
+            addPhonemeButton.Enabled = false;
+
             return;
         }
+
+        noMatchingPhonemeLabel.Visible = false;
+        addPhonemeButton.Enabled = true;
+
+        ApplyConsonant(match);
 
         ApplyConsonant(match);
     }
