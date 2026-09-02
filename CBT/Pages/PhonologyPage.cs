@@ -4,7 +4,7 @@ using CBT.Models;
 using CBT.Data;
 
 namespace CBT.Pages;
-
+//————————————————————以下代码由AI辅助整理，实现最整洁的架构以便以后的修改。——————————————————————
 public class PhonologyPage : UserControl
 {
     // 音素输入与操作控件
@@ -233,6 +233,25 @@ public class PhonologyPage : UserControl
             AutoSize = true
         };
 
+        TableLayoutPanel phonemeLists = new()
+        {
+            ColumnCount = 3,
+            RowCount = 2,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            GrowStyle = TableLayoutPanelGrowStyle.FixedSize,
+            Margin = new Padding(0)
+        };
+
+        phonemeLists.ColumnStyles.Add(
+            new ColumnStyle(SizeType.Absolute, 725));
+        phonemeLists.ColumnStyles.Add(
+            new ColumnStyle(SizeType.Absolute, 30));
+        phonemeLists.ColumnStyles.Add(
+            new ColumnStyle(SizeType.Absolute, 725));
+        phonemeLists.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        phonemeLists.RowStyles.Add(new RowStyle(SizeType.Absolute, 180));
+
         Panel bottomSpacer = new()
         {
             Size = new Size(1, 60),
@@ -271,13 +290,20 @@ public class PhonologyPage : UserControl
         UpdateSelectionMode();
         UpdateSymbolFromFeatures();
 
+        consonantTitle.Margin = new Padding(0, 0, 0, 3);
+        vowelTitle.Margin = new Padding(0, 0, 0, 3);
+        consonantList.Margin = new Padding(0);
+        vowelList.Margin = new Padding(0);
+
+        phonemeLists.Controls.Add(consonantTitle, 0, 0);
+        phonemeLists.Controls.Add(vowelTitle, 2, 0);
+        phonemeLists.Controls.Add(consonantList, 0, 1);
+        phonemeLists.Controls.Add(vowelList, 2, 1);
+
         section.Controls.Add(sectionHeader);
         section.Controls.Add(inputRow);
-        section.Controls.Add(consonantTitle);
-        section.Controls.Add(consonantList);
+        section.Controls.Add(phonemeLists);
         section.Controls.Add(BuildConsonantChart());
-        section.Controls.Add(vowelTitle);
-        section.Controls.Add(vowelList);
         section.Controls.Add(bottomSpacer);
 
         return section;
@@ -560,10 +586,10 @@ public class PhonologyPage : UserControl
     // 配置辅音与元音清单的尺寸和字体。
     private void ConfigurePhonemeLists()
     {
-        consonantList.Size = new Size(500, 180);
+        consonantList.Size = new Size(725, 180);
         consonantList.Font = new Font("Microsoft YaHei UI", 12);
 
-        vowelList.Size = new Size(500, 180);
+        vowelList.Size = new Size(725, 180);
         vowelList.Font = new Font("Microsoft YaHei UI", 12);
     }
 
