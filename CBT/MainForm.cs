@@ -41,7 +41,7 @@ public partial class MainForm : Form
         BuildFileMenu();
         BuildNavigation();
 
-        ShowControl(new OverviewPage());
+        ShowControl(new OverviewPage(currentProject, MarkProjectModified));
         //把点击按钮返回的内容都来自overviewpage
 
     }
@@ -89,7 +89,7 @@ public partial class MainForm : Form
         navigationPanel.Controls.Add(lexiconButton);
         //点击按钮来展示页面
         //显示overview页，后面同理，内容直接来自对应的.cs
-        overviewButton.Click += (sender, e) => ShowControl(new OverviewPage());
+        overviewButton.Click += (sender, e) => ShowControl(new OverviewPage(currentProject, MarkProjectModified));
         phonologyButton.Click += (sender, e) => ShowControl(new PhonologyPage(currentProject,MarkProjectModified));
         grammarButton.Click += (sender, e) => ShowPage("语法  Grammar");
         lexiconButton.Click += (sender, e) => ShowPage("词汇  Lexicon");
@@ -344,7 +344,7 @@ public partial class MainForm : Form
 
             // 打开新项目后返回概览页。
             // 用户再次进入音系页面时，会读取新的 currentProject。
-            ShowControl(new OverviewPage());
+            ShowControl(new OverviewPage(currentProject, MarkProjectModified));
         }
         catch (Exception ex)
         {
@@ -445,7 +445,7 @@ public partial class MainForm : Form
         UpdateWindowTitle();
 
         ShowControl(
-            new OverviewPage());
+            new OverviewPage(currentProject, MarkProjectModified));
     }
 
     // 将当前项目保存到指定路径。

@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace CBT.Data;
+﻿namespace CBT.Data;
 
 public record IpaConsonant(
     string Symbol,
@@ -14,7 +10,7 @@ public record IpaConsonant(
 public static class IpaConsonants
 {
     public static readonly List<IpaConsonant> All =
-        //这段AI写的。还不如我的，赫赫。
+    //这段AI写的。还不如我的，赫赫。
     [
     // Plosives
     new("p", "双唇  Bilabial", "塞音  Plosive", "清音  Voiceless"),

@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace CBT.Models;
+﻿namespace CBT.Models;
 
 public class LexiconData
 {

@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using CBT.Data;
 using CBT.Models;
-using CBT.Data;
 
 namespace CBT.Pages;
 //————————————————————以下代码由AI辅助整理为更整洁的布局，以便以后的修改。——————————————————————
@@ -166,11 +164,11 @@ public class PhonologyPage : UserControl
 
     // 初始化页面布局并创建音素清单区域。
     public PhonologyPage()
-        : this(new ConlangProject(),null)
+        : this(new ConlangProject(), null)
     {
     }
 
-    public PhonologyPage(ConlangProject project,Action? projectModified)
+    public PhonologyPage(ConlangProject project, Action? projectModified)
     {
         this.project = project;
         this.projectModified =

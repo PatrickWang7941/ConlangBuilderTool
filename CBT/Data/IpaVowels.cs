@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-//这一页用来实现元音功能
+﻿//这一页用来实现元音功能
 namespace CBT.Data;
 
 public record IpaVowel(
