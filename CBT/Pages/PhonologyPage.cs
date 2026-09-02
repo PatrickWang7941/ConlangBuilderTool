@@ -1522,26 +1522,60 @@ public class PhonologyPage : UserControl
             return;
         }
 
+        string input = phonemeInput.Text.Trim();
+
+        // 输入框为空时，不显示错误，
+        // 但不能允许添加音素。
+        if (input.Length == 0)
+        {
+            ClearIpaSelections();
+
+            noMatchingPhonemeLabel.Visible = false;
+            addPhonemeButton.Enabled = false;
+
+            return;
+        }
+
+        // 辅音
         if (phonemeType.SelectedIndex == 0)
         {
-            IpaConsonant? consonant = FindConsonantFromInput();
+            IpaConsonant? consonant =
+                FindConsonantFromInput();
 
             if (consonant == null)
             {
                 ClearIpaSelections();
+
+                noMatchingPhonemeLabel.Visible = true;
+                addPhonemeButton.Enabled = false;
+
                 return;
             }
 
+            noMatchingPhonemeLabel.Visible = false;
+            addPhonemeButton.Enabled = true;
+
             ApplyConsonant(consonant);
+
             return;
         }
 
-        IpaVowel? vowel = FindVowelFromInput();
+        // 元音
+        IpaVowel? vowel =
+            FindVowelFromInput();
 
         if (vowel == null)
         {
+            ClearIpaSelections();
+
+            noMatchingPhonemeLabel.Visible = true;
+            addPhonemeButton.Enabled = false;
+
             return;
         }
+
+        noMatchingPhonemeLabel.Visible = false;
+        addPhonemeButton.Enabled = true;
 
         ApplyVowel(vowel);
     }
@@ -1591,35 +1625,56 @@ public class PhonologyPage : UserControl
         RefreshConsonantChart();
         RefreshVowelChart();
     }
-    // 把当前输入的音素加入对应清单，并刷新辅音音系表。
+    // 把当前输入的音素加入项目。
+    // 只有 IPA 参考数据库中存在的音素才能被加入。
     private void AddPhoneme(object? sender, EventArgs e)
     {
-        string phoneme = phonemeInput.Text.Trim();
+        string phoneme =
+            phonemeInput.Text.Trim();
 
         if (phoneme.Length == 0)
         {
             return;
         }
 
+        // 添加辅音
         if (phonemeType.SelectedIndex == 0)
         {
-            phoneme = NormalizeInputSymbol(phoneme);
+            phoneme =
+                NormalizeInputSymbol(phoneme);
 
+            // 必须从 IPA 数据库中找到对应辅音。
+            IpaConsonant? ipaConsonant =
+                IpaConsonants.All.FirstOrDefault(
+                    x => x.Symbol == phoneme);
+
+            if (ipaConsonant == null)
+            {
+                noMatchingPhonemeLabel.Visible = true;
+                addPhonemeButton.Enabled = false;
+
+                return;
+            }
+
+            // 防止重复添加。
             if (project.Phonology.Consonants.Any(
                 x => x.Symbol == phoneme))
             {
                 return;
             }
 
+            // 属性直接来自 IPA 参考数据库，
+            // 而不是依赖界面下拉框当前残留的状态。
             ConsonantPhoneme projectConsonant = new()
             {
-                Symbol = phoneme,
-                Place = consonantPlace.Text,
-                Manner = consonantManner.Text,
-                Voicing = consonantVoicing.Text
+                Symbol = ipaConsonant.Symbol,
+                Place = ipaConsonant.Place,
+                Manner = ipaConsonant.Manner,
+                Voicing = ipaConsonant.Voicing
             };
 
-            project.Phonology.Consonants.Add(projectConsonant);
+            project.Phonology.Consonants.Add(
+                projectConsonant);
 
             ConsonantEntry displayConsonant = new()
             {
@@ -1629,27 +1684,46 @@ public class PhonologyPage : UserControl
                 Voicing = projectConsonant.Voicing
             };
 
-            consonantList.Items.Add(displayConsonant);
+            consonantList.Items.Add(
+                displayConsonant);
 
             RefreshConsonantChart();
         }
+
+        // 添加元音
         else
         {
+            // 必须从 IPA 数据库中找到对应元音。
+            IpaVowel? ipaVowel =
+                IpaVowels.All.FirstOrDefault(
+                    x => x.Symbol == phoneme);
+
+            if (ipaVowel == null)
+            {
+                noMatchingPhonemeLabel.Visible = true;
+                addPhonemeButton.Enabled = false;
+
+                return;
+            }
+
+            // 防止重复添加。
             if (project.Phonology.Vowels.Any(
                 x => x.Symbol == phoneme))
             {
                 return;
             }
 
+            // 属性直接来自 IPA 参考数据库。
             VowelPhoneme projectVowel = new()
             {
-                Symbol = phoneme,
-                Height = vowelHeight.Text,
-                Backness = vowelBackness.Text,
-                Roundedness = vowelRoundedness.Text
+                Symbol = ipaVowel.Symbol,
+                Height = ipaVowel.Height,
+                Backness = ipaVowel.Backness,
+                Roundedness = ipaVowel.Roundedness
             };
 
-            project.Phonology.Vowels.Add(projectVowel);
+            project.Phonology.Vowels.Add(
+                projectVowel);
 
             VowelEntry displayVowel = new()
             {
@@ -1659,11 +1733,15 @@ public class PhonologyPage : UserControl
                 Roundedness = projectVowel.Roundedness
             };
 
-            vowelList.Items.Add(displayVowel);
+            vowelList.Items.Add(
+                displayVowel);
+
             RefreshVowelChart();
         }
 
+        // 通知主窗口：项目已经修改。
         projectModified?.Invoke();
+
         phonemeInput.Clear();
         phonemeInput.Focus();
     }
