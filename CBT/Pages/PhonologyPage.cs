@@ -4,7 +4,7 @@ using CBT.Models;
 using CBT.Data;
 
 namespace CBT.Pages;
-//————————————————————以下代码由AI辅助整理，实现最整洁的架构以便以后的修改。——————————————————————
+//————————————————————以下代码由AI辅助整理为更整洁的布局，以便以后的修改。——————————————————————
 public class PhonologyPage : UserControl
 {
     // 音素输入与操作控件
@@ -34,6 +34,12 @@ public class PhonologyPage : UserControl
     private readonly ComboBox vowelBackness = new();
     private readonly ComboBox vowelRoundedness = new();
     private readonly ListBox vowelList = new();
+    // 元音图
+    private readonly Panel vowelChart = new();
+
+    private readonly Dictionary<
+        (string Height, string Backness, string Roundedness),
+        Label> vowelChartCells = new();
     private readonly ConlangProject project;
 
     private SelectionMode selectionMode = SelectionMode.Detailed;
@@ -188,6 +194,7 @@ public class PhonologyPage : UserControl
         contentPanel.Controls.Add(title);
         contentPanel.Controls.Add(BuildPhonemeInventory());
         Controls.Add(contentPanel);
+        LoadProjectPhonology();
     }
 
     // 组装输入区、音素清单和辅音音系表的整体界面。
@@ -304,6 +311,7 @@ public class PhonologyPage : UserControl
         section.Controls.Add(inputRow);
         section.Controls.Add(phonemeLists);
         section.Controls.Add(BuildConsonantChart());
+        section.Controls.Add(BuildVowelChart());
         section.Controls.Add(bottomSpacer);
 
         return section;
@@ -767,6 +775,246 @@ public class PhonologyPage : UserControl
             SystemInformation.HorizontalScrollBarHeight + 5;
 
         return chartContainer;
+    }
+
+    // 创建 IPA 风格的元音梯形图。
+    private Control BuildVowelChart()
+    {
+        Panel chartContainer = new()
+        {
+            Width = 1000,
+            Height = 430,
+            Margin = new Padding(0, 20, 0, 25)
+        };
+
+        vowelChart.Size = new Size(900, 390);
+        vowelChart.Location = new Point(0, 0);
+
+        vowelChartCells.Clear();
+
+        // 绘制元音梯形的结构线。
+        vowelChart.Paint += (sender, e) =>
+        {
+            using Pen pen = new(Color.Gray, 1);
+
+            Point topLeft = new(250, 55);
+            Point topRight = new(730, 55);
+            Point bottomLeft = new(370, 340);
+            Point bottomRight = new(730, 340);
+
+            // 外框
+            e.Graphics.DrawLine(pen, topLeft, topRight);
+            e.Graphics.DrawLine(pen, topLeft, bottomLeft);
+            e.Graphics.DrawLine(pen, topRight, bottomRight);
+            e.Graphics.DrawLine(pen, bottomLeft, bottomRight);
+
+            // 中央参考线
+            e.Graphics.DrawLine(
+                pen,
+                new Point(490, 55),
+                new Point(550, 340));
+        };
+
+        // 前、央、后
+        AddVowelChartHeader(
+            "前  Front",
+            new Point(220, 10));
+
+        AddVowelChartHeader(
+            "央  Central",
+            new Point(450, 10));
+
+        AddVowelChartHeader(
+            "后  Back",
+            new Point(700, 10));
+
+        // 高度标签
+        AddVowelHeightLabel(
+            "闭  Close",
+            45);
+
+        AddVowelHeightLabel(
+            "近闭  Near-close",
+            90);
+
+        AddVowelHeightLabel(
+            "半闭  Close-mid",
+            135);
+
+        AddVowelHeightLabel(
+            "中  Mid",
+            180);
+
+        AddVowelHeightLabel(
+            "半开  Open-mid",
+            225);
+
+        AddVowelHeightLabel(
+            "近开  Near-open",
+            270);
+
+        AddVowelHeightLabel(
+            "开  Open",
+            315);
+
+        // 根据现有 IPA 元音数据库自动创建对应位置。
+        foreach (IpaVowel vowel in IpaVowels.All)
+        {
+            Point anchor =
+                GetVowelChartPosition(
+                    vowel.Height,
+                    vowel.Backness);
+
+            bool hasRoundedPair =
+                IpaVowels.All.Any(x =>
+                    x.Height == vowel.Height &&
+                    x.Backness == vowel.Backness &&
+                    x.Roundedness != vowel.Roundedness);
+
+            int x;
+
+            if (!hasRoundedPair)
+            {
+                x = anchor.X - 20;
+            }
+            else if (vowel.Roundedness.StartsWith("不圆唇"))
+            {
+                x = anchor.X - 42;
+            }
+            else
+            {
+                x = anchor.X + 2;
+            }
+
+            Label cell = new()
+            {
+                Text = "",
+                Location = new Point(x, anchor.Y - 14),
+                Size = new Size(40, 30),
+                TextAlign = ContentAlignment.MiddleCenter,
+                Font = new Font("Microsoft YaHei UI", 14)
+            };
+
+            vowelChartCells[
+                (vowel.Height,
+                 vowel.Backness,
+                 vowel.Roundedness)
+            ] = cell;
+
+            vowelChart.Controls.Add(cell);
+        }
+
+        chartContainer.Controls.Add(vowelChart);
+
+        return chartContainer;
+    }
+    // 添加元音图顶部的前后度标题。
+    private void AddVowelChartHeader(
+        string text,
+        Point location)
+    {
+        Label label = new()
+        {
+            Text = text,
+            AutoSize = true,
+            Location = location,
+            Font = new Font(
+                "Microsoft YaHei UI",
+                10,
+                FontStyle.Bold)
+        };
+
+        vowelChart.Controls.Add(label);
+    }
+    // 添加元音图左侧的高度标题。
+    private void AddVowelHeightLabel(
+        string text,
+        int y)
+    {
+        Label label = new()
+        {
+            Text = text,
+            Size = new Size(180, 30),
+            Location = new Point(10, y - 14),
+            TextAlign = ContentAlignment.MiddleRight,
+            Font = new Font(
+                "Microsoft YaHei UI",
+                9)
+        };
+
+        vowelChart.Controls.Add(label);
+    }
+    // 根据当前项目中的元音重新填充元音图。
+    private void RefreshVowelChart()
+    {
+        foreach (Label cell in vowelChartCells.Values)
+        {
+            cell.Text = "";
+        }
+
+        foreach (VowelPhoneme vowel in project.Phonology.Vowels)
+        {
+            var key =
+                (
+                    vowel.Height,
+                    vowel.Backness,
+                    vowel.Roundedness
+                );
+
+            if (!vowelChartCells.TryGetValue(
+                key,
+                out Label? cell))
+            {
+                continue;
+            }
+
+            if (cell.Text.Length == 0)
+            {
+                cell.Text = vowel.Symbol;
+            }
+            else
+            {
+                cell.Text += $" {vowel.Symbol}";
+            }
+        }
+    }
+    // 根据元音高度和前后度计算其在梯形图中的位置。
+    private static Point GetVowelChartPosition(
+        string height,
+        string backness)
+    {
+        int row = height switch
+        {
+            "闭  Close" => 0,
+            "近闭  Near-close" => 1,
+            "半闭  Close-mid" => 2,
+            "中  Mid" => 3,
+            "半开  Open-mid" => 4,
+            "近开  Near-open" => 5,
+            "开  Open" => 6,
+            _ => 0
+        };
+
+        int y = 55 + row * 45;
+
+        // 越靠近开元音，前元音的位置越向右，
+        // 从而形成 IPA 元音梯形。
+        int frontX = 250 + row * 20;
+
+        int backX = 730;
+
+        int centralX =
+            (frontX + backX) / 2;
+
+        int x = backness switch
+        {
+            "前  Front" => frontX,
+            "央  Central" => centralX,
+            "后  Back" => backX,
+            _ => centralX
+        };
+
+        return new Point(x, y);
     }
 
     // 根据音素类型和选择模式切换可见控件，并同步当前音素。
@@ -1336,10 +1584,18 @@ public class PhonologyPage : UserControl
 
         foreach (VowelPhoneme vowel in project.Phonology.Vowels)
         {
-            vowelList.Items.Add(vowel.Symbol);
+            vowelList.Items.Add(
+                new VowelEntry
+                {
+                    Symbol = vowel.Symbol,
+                    Height = vowel.Height,
+                    Backness = vowel.Backness,
+                    Roundedness = vowel.Roundedness
+                });
         }
 
         RefreshConsonantChart();
+        RefreshVowelChart();
     }
     // 把当前输入的音素加入对应清单，并刷新辅音音系表。
     private void AddPhoneme(object? sender, EventArgs e)
@@ -1410,6 +1666,7 @@ public class PhonologyPage : UserControl
             };
 
             vowelList.Items.Add(displayVowel);
+            RefreshVowelChart();
         }
 
         phonemeInput.Clear();
@@ -1437,6 +1694,8 @@ public class PhonologyPage : UserControl
                 x => x.Symbol == vowel.Symbol);
 
             vowelList.Items.Remove(vowel);
+
+            RefreshVowelChart();
         }
     }
 
