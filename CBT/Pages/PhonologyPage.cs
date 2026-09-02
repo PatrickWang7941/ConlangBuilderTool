@@ -152,7 +152,7 @@ public class PhonologyPage : UserControl
             string backness = GetChinesePart(Backness);
             string roundedness = GetChinesePart(Roundedness);
 
-            return $"{Symbol}    {roundedness}{backness}{height}元音";
+            return $"{Symbol}    {roundedness}{backness}{height}";
         }
     }
 
@@ -1375,7 +1375,15 @@ public class PhonologyPage : UserControl
 
             project.Phonology.Vowels.Add(projectVowel);
 
-            vowelList.Items.Add(projectVowel.Symbol);
+            VowelEntry displayVowel = new()
+            {
+                Symbol = projectVowel.Symbol,
+                Height = projectVowel.Height,
+                Backness = projectVowel.Backness,
+                Roundedness = projectVowel.Roundedness
+            };
+
+            vowelList.Items.Add(displayVowel);
         }
 
         phonemeInput.Clear();
@@ -1397,12 +1405,12 @@ public class PhonologyPage : UserControl
             return;
         }
 
-        if (vowelList.SelectedItem is string vowelSymbol)
+        if (vowelList.SelectedItem is VowelEntry vowel)
         {
             project.Phonology.Vowels.RemoveAll(
-                x => x.Symbol == vowelSymbol);
+                x => x.Symbol == vowel.Symbol);
 
-            vowelList.Items.Remove(vowelSymbol);
+            vowelList.Items.Remove(vowel);
         }
     }
 
