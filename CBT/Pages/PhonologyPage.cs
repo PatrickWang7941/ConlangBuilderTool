@@ -208,7 +208,8 @@ public class PhonologyPage : UserControl
                 return;
 
             // 分组标题不能作为音素选择。
-            if (selectedItem.Consonant == null && selectedItem.NonPulmonicConsonant == null && selectedItem.OtherSymbol == null && selectedItem.Vowel == null)
+            if (selectedItem.Consonant == null && selectedItem.NonPulmonicConsonant == null &&
+                selectedItem.OtherSymbol == null && selectedItem.Vowel == null)
             {
                 isSynchronizingSelection = true;
                 ipaSymbolPicker.SelectedIndex = lastIpaSymbolIndex;
@@ -285,13 +286,16 @@ public class PhonologyPage : UserControl
     }
     private void ConfigureConsonantFeatureSelectors()
     {
-        consonantPlace.Items.AddRange("双唇  Bilabial", "唇齿  Labiodental", "齿  Dental", "齿龈  Alveolar", "龈后  Postalveolar", "龈腭  Alveolo-palatal", "卷舌  Retroflex", "硬腭  Palatal", "唇硬腭  Labial-palatal", "软腭  Velar", "小舌  Uvular", "咽  Pharyngeal", "会厌  Epiglottal", "声门  Glottal", "唇软腭  Labial-velar");
+        consonantPlace.Items.AddRange("双唇  Bilabial", "唇齿  Labiodental", "齿  Dental", "齿龈  Alveolar",
+            "龈后  Postalveolar", "龈腭  Alveolo-palatal", "卷舌  Retroflex", "硬腭  Palatal", "唇硬腭  Labial-palatal",
+            "软腭  Velar", "小舌  Uvular", "咽  Pharyngeal", "会厌  Epiglottal", "声门  Glottal", "唇软腭  Labial-velar");
         consonantPlace.DropDownStyle = ComboBoxStyle.DropDownList;
         consonantPlace.Width = 180;
         consonantPlace.SelectedIndex = 0;
         consonantPlace.Font = new Font("Microsoft YaHei UI", 10);
         consonantPlace.Margin = new Padding(0, 3, 6, 0);
-        consonantManner.Items.AddRange("塞音  Plosive", "鼻音  Nasal", "颤音  Trill", "闪音  Tap / Flap", "边闪音  Lateral flap", "擦音  Fricative", "边擦音  Lateral fricative", "近音  Approximant", "边近音  Lateral approximant", "塞擦音  Affricate");
+        consonantManner.Items.AddRange("塞音  Plosive", "鼻音  Nasal", "颤音  Trill", "闪音  Tap / Flap", "边闪音  Lateral flap",
+            "擦音  Fricative", "边擦音  Lateral fricative", "近音  Approximant", "边近音  Lateral approximant", "塞擦音  Affricate");
         consonantManner.DropDownStyle = ComboBoxStyle.DropDownList;
         consonantManner.Width = 190;
         consonantManner.SelectedIndex = 0;
@@ -309,7 +313,8 @@ public class PhonologyPage : UserControl
     }
     private void ConfigureVowelFeatureSelectors()
     {
-        vowelHeight.Items.AddRange("闭  Close", "近闭  Near-close", "半闭  Close-mid", "中  Mid", "半开  Open-mid", "近开  Near-open", "开  Open");
+        vowelHeight.Items.AddRange("闭  Close", "近闭  Near-close", "半闭  Close-mid", "中  Mid", "半开  Open-mid",
+            "近开  Near-open", "开  Open");
         vowelHeight.DropDownStyle = ComboBoxStyle.DropDownList;
         vowelHeight.Width = 170;
         vowelHeight.SelectedIndex = 0;
@@ -737,7 +742,8 @@ public class PhonologyPage : UserControl
         foreach (var vowel in IpaVowels.All)
         {
             var anchor = GetVowelChartPosition(vowel.Height, vowel.Backness);
-            var hasRoundedPair = IpaVowels.All.Any(x => x.Height == vowel.Height && x.Backness == vowel.Backness && x.Roundedness != vowel.Roundedness);
+            var hasRoundedPair = IpaVowels.All.Any(x =>
+                x.Height == vowel.Height && x.Backness == vowel.Backness && x.Roundedness != vowel.Roundedness);
             int x;
             if (!hasRoundedPair)
                 x = anchor.X - 20;
@@ -911,7 +917,8 @@ public class PhonologyPage : UserControl
         {
             ipaSymbolPicker.Items.Add(new IpaDisplayItem($"── " + $"{GetCategoryDisplayName(category.Key)} " + $"──"));
             foreach (var consonant in category)
-                ipaSymbolPicker.Items.Add(new IpaDisplayItem($"{consonant.Symbol}   " + $"{GetConsonantDescription(consonant)}", consonant));
+                ipaSymbolPicker.Items.Add(
+                    new IpaDisplayItem($"{consonant.Symbol}   " + $"{GetConsonantDescription(consonant)}", consonant));
         }
 
         // 非肺部气流辅音
@@ -919,7 +926,8 @@ public class PhonologyPage : UserControl
         {
             ipaSymbolPicker.Items.Add(new IpaDisplayItem($"── {category.Key} ──"));
             foreach (var consonant in category)
-                ipaSymbolPicker.Items.Add(new IpaDisplayItem($"{consonant.Symbol}   " + $"{consonant.Description}", consonant));
+                ipaSymbolPicker.Items.Add(new IpaDisplayItem($"{consonant.Symbol}   " + $"{consonant.Description}",
+                    consonant));
         }
 
         // Other IPA Symbols
@@ -953,7 +961,8 @@ public class PhonologyPage : UserControl
         ipaChoice.BeginUpdate();
         ipaChoice.Items.Clear();
         foreach (var consonant in IpaConsonants.All.Where(x => x.Manner == manner))
-            ipaChoice.Items.Add(new IpaDisplayItem($"{consonant.Symbol}   " + $"{GetConsonantDescription(consonant)}", consonant));
+            ipaChoice.Items.Add(new IpaDisplayItem($"{consonant.Symbol}   " + $"{GetConsonantDescription(consonant)}",
+                consonant));
         ipaChoice.SelectedIndex = -1;
         ipaChoice.EndUpdate();
         isSynchronizingSelection = wasSynchronizing;
@@ -1066,7 +1075,8 @@ public class PhonologyPage : UserControl
     {
         if (isSynchronizingSelection || phonemeType.SelectedIndex != 0)
             return;
-        var match = IpaConsonants.All.FirstOrDefault(x => x.Place == consonantPlace.Text && x.Manner == consonantManner.Text && x.Voicing == consonantVoicing.Text);
+        var match = IpaConsonants.All.FirstOrDefault(x =>
+            x.Place == consonantPlace.Text && x.Manner == consonantManner.Text && x.Voicing == consonantVoicing.Text);
         if (match == null)
         {
             var wasSynchronizing = isSynchronizingSelection;
@@ -1090,9 +1100,11 @@ public class PhonologyPage : UserControl
         ipaSymbolPicker.Items.Clear();
         foreach (var category in IpaVowels.All.GroupBy(x => x.Height))
         {
-            ipaSymbolPicker.Items.Add(new IpaDisplayItem($"── " + $"{GetVowelCategoryDisplayName(category.Key)} " + $"──"));
+            ipaSymbolPicker.Items.Add(
+                new IpaDisplayItem($"── " + $"{GetVowelCategoryDisplayName(category.Key)} " + $"──"));
             foreach (var vowel in category)
-                ipaSymbolPicker.Items.Add(new IpaDisplayItem($"{vowel.Symbol}   " + $"{GetVowelDescription(vowel)}", vowel));
+                ipaSymbolPicker.Items.Add(new IpaDisplayItem($"{vowel.Symbol}   " + $"{GetVowelDescription(vowel)}",
+                    vowel));
         }
         ipaSymbolPicker.SelectedIndex = -1;
         lastIpaSymbolIndex = -1;
@@ -1188,7 +1200,8 @@ public class PhonologyPage : UserControl
     {
         if (isSynchronizingSelection || phonemeType.SelectedIndex != 1)
             return;
-        var match = IpaVowels.All.FirstOrDefault(x => x.Height == vowelHeight.Text && x.Backness == vowelBackness.Text && x.Roundedness == vowelRoundedness.Text);
+        var match = IpaVowels.All.FirstOrDefault(x =>
+            x.Height == vowelHeight.Text && x.Backness == vowelBackness.Text && x.Roundedness == vowelRoundedness.Text);
         if (match == null)
         {
             var wasSynchronizing = isSynchronizingSelection;
@@ -1481,7 +1494,9 @@ public class PhonologyPage : UserControl
                 continue;
             if (!nonPulmonicChartCells.TryGetValue(consonant.Category, out var cell))
                 continue;
-            var description = string.IsNullOrWhiteSpace(consonant.Description) ? "" : GetChinesePart(consonant.Description);
+            var description = string.IsNullOrWhiteSpace(consonant.Description)
+                ? ""
+                : GetChinesePart(consonant.Description);
             var line = description.Length == 0 ? consonant.Symbol : $"{consonant.Symbol}    " + $"{description}";
             if (cell.Text.Length == 0)
                 cell.Text = line;
@@ -1544,7 +1559,8 @@ public class PhonologyPage : UserControl
     }
     private static string GetVowelDescription(IpaVowel vowel)
     {
-        return $"{GetChinesePart(vowel.Roundedness)}" + $"{GetChinesePart(vowel.Backness)}" + $"{GetChinesePart(vowel.Height)}元音";
+        return $"{GetChinesePart(vowel.Roundedness)}" + $"{GetChinesePart(vowel.Backness)}" +
+               $"{GetChinesePart(vowel.Height)}元音";
     }
     private static string GetChinesePart(string bilingualText)
     {
