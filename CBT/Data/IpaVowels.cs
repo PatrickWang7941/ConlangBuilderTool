@@ -1,4 +1,5 @@
 ﻿//这一页用来实现元音功能
+
 namespace CBT.Data;
 
 public record IpaVowel(

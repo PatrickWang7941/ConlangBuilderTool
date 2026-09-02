@@ -1,12 +1,5 @@
 ﻿namespace CBT.Data;
-
-public record IpaConsonant(
-    string Symbol,
-    string Place,
-    string Manner,
-    string Voicing
-);
-
+public record IpaConsonant(string Symbol, string Place, string Manner, string Voicing);
 public static class IpaConsonants
 {
     public static readonly List<IpaConsonant> All =
@@ -31,13 +24,10 @@ public static class IpaConsonants
             // Affricates
             new("t͡s", "齿龈  Alveolar", "塞擦音  Affricate", "清音  Voiceless"),
             new("d͡z", "齿龈  Alveolar", "塞擦音  Affricate", "浊音  Voiced"),
-
             new("t͡ʃ", "龈后  Postalveolar", "塞擦音  Affricate", "清音  Voiceless"),
             new("d͡ʒ", "龈后  Postalveolar", "塞擦音  Affricate", "浊音  Voiced"),
-
             new("t͡ɕ", "龈腭  Alveolo-palatal", "塞擦音  Affricate", "清音  Voiceless"),
             new("d͡ʑ", "龈腭  Alveolo-palatal", "塞擦音  Affricate", "浊音  Voiced"),
-
             new("ʈ͡ʂ", "卷舌  Retroflex", "塞擦音  Affricate", "清音  Voiceless"),
             new("ɖ͡ʐ", "卷舌  Retroflex", "塞擦音  Affricate", "浊音  Voiced"),
 
