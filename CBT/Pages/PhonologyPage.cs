@@ -24,7 +24,17 @@ public class PhonologyPage : UserControl
     //引导模式使用的分类和具体IPA选择器
     private readonly ComboBox ipaCategory = new();
     private readonly ComboBox ipaChoice = new();
-    private bool isDetailedMode = true;
+    private enum SelectionMode
+    {
+        //详细模式
+        Detailed,
+        //引导模式
+        Guided,
+        //列表模式
+        List
+    }
+
+    private SelectionMode selectionMode = SelectionMode.Detailed;
     private bool isSynchronizingSelection;
     private int lastIpaSymbolIndex = -1;
     //添加/选择辅音属性
@@ -143,7 +153,12 @@ public class PhonologyPage : UserControl
         selectionModeButton.Margin = new Padding(20, 0, 0, 0);
         selectionModeButton.Click += (sender, e) =>
         {
-            isDetailedMode = !isDetailedMode;
+            selectionMode = selectionMode switch
+            {
+                SelectionMode.Detailed => SelectionMode.Guided,
+                SelectionMode.Guided => SelectionMode.List,
+                _ => SelectionMode.Detailed
+            };
             UpdateSelectionMode();
         };
 
@@ -375,9 +390,6 @@ public class PhonologyPage : UserControl
         section.Controls.Add(vowelTitle);
         section.Controls.Add(vowelList);
 
-        section.Controls.Add(vowelTitle);
-        section.Controls.Add(vowelList);
-
         return section;
     }
     //建立辅音音系表
@@ -385,7 +397,7 @@ public class PhonologyPage : UserControl
     {
         Panel chartContainer = new();
 
-        chartContainer.Size = new Size(1450, 420);
+        chartContainer.Size = new Size(1480, 500);
         chartContainer.AutoScroll = true;
         chartContainer.Margin = new Padding(0, 15, 0, 25);
 
@@ -401,7 +413,8 @@ public class PhonologyPage : UserControl
         "软腭\nVelar",
         "小舌\nUvular",
         "咽\nPharyngeal",
-        "声门\nGlottal"
+        "声门\nGlottal",
+        "唇软腭\nLabial-velar"
     };
 
         string[] manners =
@@ -425,7 +438,7 @@ public class PhonologyPage : UserControl
         consonantChart.CellBorderStyle = TableLayoutPanelCellBorderStyle.Single;
         consonantChart.Location = new Point(0, 0);
 
-        //左上角空白格
+        //左上角空白
         consonantChart.ColumnStyles.Add(
             new ColumnStyle(SizeType.Absolute, 150));
 
@@ -433,12 +446,12 @@ public class PhonologyPage : UserControl
         foreach (string place in places)
         {
             consonantChart.ColumnStyles.Add(
-                new ColumnStyle(SizeType.Absolute, 110));
+                new ColumnStyle(SizeType.Absolute, 100));
         }
 
         //标题行
         consonantChart.RowStyles.Add(
-            new RowStyle(SizeType.Absolute, 38));
+            new RowStyle(SizeType.Absolute, 45));
 
         for (int column = 0; column < places.Length; column++)
         {
@@ -456,7 +469,7 @@ public class PhonologyPage : UserControl
         for (int row = 0; row < manners.Length; row++)
         {
             consonantChart.RowStyles.Add(
-                new RowStyle(SizeType.Absolute, 45));
+                new RowStyle(SizeType.Absolute, 40));
 
             Label mannerLabel = new();
 
@@ -590,26 +603,45 @@ public class PhonologyPage : UserControl
         bool isConsonant = phonemeType.SelectedIndex == 0;
         IpaConsonant? currentConsonant = FindConsonantFromInput();
 
-        ipaSymbolPicker.Visible = false;
-        consonantPlace.Visible = isDetailedMode && isConsonant;
-        consonantManner.Visible = isDetailedMode && isConsonant;
-        consonantVoicing.Visible = isDetailedMode && isConsonant;
+        //详细模式
+        bool detailedMode = selectionMode == SelectionMode.Detailed;
+        //引导模式
+        bool guidedMode = selectionMode == SelectionMode.Guided;
+        //列表模式
+        bool listMode = selectionMode == SelectionMode.List;
+        //列表模式显示大型 IPA 下拉栏
+        ipaSymbolPicker.Visible = listMode && isConsonant;
+        //详细模式显示语言学属性
+        consonantPlace.Visible = detailedMode && isConsonant;
+        consonantManner.Visible = detailedMode && isConsonant;
+        consonantVoicing.Visible = detailedMode && isConsonant;
+        //引导模式显示分类和ipa符号
+        ipaCategory.Visible = guidedMode;
+        ipaChoice.Visible = guidedMode;
 
-        ipaCategory.Visible = !isDetailedMode;
-        ipaChoice.Visible = !isDetailedMode;
-
-        selectionModeButton.Text = isDetailedMode
-            ? "切换到引导模式"
-            : "切换到详细模式";
-
-        if (isDetailedMode)
+        selectionModeButton.Text = selectionMode switch
+        {
+            SelectionMode.Detailed => "切换到引导模式",
+            SelectionMode.Guided => "切换到列表模式",
+            SelectionMode.List => "切换到详细模式",
+            _ => "切换模式"
+        };
+        //详细模式
+        if (selectionMode == SelectionMode.Detailed)
         {
             if (currentConsonant != null)
                 SelectDetailedConsonant(currentConsonant);
 
             return;
         }
+        //列表模式
+        if (selectionMode == SelectionMode.List)
+        {
+            if (currentConsonant != null)
+                SelectDetailedConsonant(currentConsonant);
 
+            return;
+        }
         if (isConsonant)
         {
             ipaCategory.Enabled = true;
@@ -758,8 +790,6 @@ public class PhonologyPage : UserControl
 
         noMatchingPhonemeLabel.Visible = false;
         addPhonemeButton.Enabled = true;
-
-        ApplyConsonant(match);
 
         ApplyConsonant(match);
     }
