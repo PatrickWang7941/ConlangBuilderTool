@@ -1229,6 +1229,90 @@ public class PhonologyPage : UserControl
             new Font(
                 "Microsoft YaHei UI",
                 12);
+
+
+        // 记录鼠标按下之前选中了哪一项。
+        // 用于判断用户是不是再次点击同一个项目。
+        int consonantSelectionBeforeClick = -1;
+        int vowelSelectionBeforeClick = -1;
+
+
+        consonantList.MouseDown +=
+            (sender, e) =>
+            {
+                consonantSelectionBeforeClick =
+                    consonantList.SelectedIndex;
+            };
+
+
+        consonantList.MouseUp +=
+            (sender, e) =>
+            {
+                int clickedIndex =
+                    consonantList.IndexFromPoint(
+                        e.Location);
+
+
+                // 点击空白区域时取消选择。
+                if (clickedIndex == ListBox.NoMatches)
+                {
+                    consonantList.ClearSelected();
+                    return;
+                }
+
+
+                // 再次点击已经选中的音素：
+                // 取消选择。
+                if (clickedIndex ==
+                    consonantSelectionBeforeClick)
+                {
+                    consonantList.ClearSelected();
+                    return;
+                }
+
+
+                // 选择辅音时取消元音的选择。
+                vowelList.ClearSelected();
+            };
+
+
+        vowelList.MouseDown +=
+            (sender, e) =>
+            {
+                vowelSelectionBeforeClick =
+                    vowelList.SelectedIndex;
+            };
+
+
+        vowelList.MouseUp +=
+            (sender, e) =>
+            {
+                int clickedIndex =
+                    vowelList.IndexFromPoint(
+                        e.Location);
+
+
+                // 点击空白区域时取消选择。
+                if (clickedIndex == ListBox.NoMatches)
+                {
+                    vowelList.ClearSelected();
+                    return;
+                }
+
+
+                // 再次点击已经选中的元音：
+                // 取消选择。
+                if (clickedIndex ==
+                    vowelSelectionBeforeClick)
+                {
+                    vowelList.ClearSelected();
+                    return;
+                }
+
+
+                // 选择元音时取消辅音的选择。
+                consonantList.ClearSelected();
+            };
     }
 
 
