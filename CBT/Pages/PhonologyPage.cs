@@ -2,19 +2,11 @@
 using CBT.Dialogs;
 using CBT.Models;
 using CBT.Services;
-
 namespace CBT.Pages;
 //————————————————————以下代码由AI辅助整理为更整洁的布局，包括统一换行和修改注释格式，以便以后的修改。——————————————————————
 public class PhonologyPage : UserControl
 {
     private readonly Button addPhonemeButton = new();
-    // IPA 附加符号组合按钮
-    private readonly Button diacriticButton = new();
-
-    // 当前正在等待添加的“基础音素 + Diacritics”。
-    private string pendingBaseSymbol = "";
-
-    private List<string> pendingDiacritics = new();
 
     // 普通辅音表
     private readonly TableLayoutPanel consonantChart = new();
@@ -25,6 +17,8 @@ public class PhonologyPage : UserControl
     // 辅音控件
     private readonly ComboBox consonantPlace = new();
     private readonly ComboBox consonantVoicing = new();
+    // IPA 附加符号组合按钮
+    private readonly Button diacriticButton = new();
     private readonly ComboBox ipaCategory = new();
     private readonly ComboBox ipaChoice = new();
     private readonly ComboBox ipaSymbolPicker = new();
@@ -60,6 +54,10 @@ public class PhonologyPage : UserControl
     private readonly ComboBox vowelRoundedness = new();
     private bool isSynchronizingSelection;
     private int lastIpaSymbolIndex = -1;
+
+    // 当前正在等待添加的“基础音素 + Diacritics”。
+    private string pendingBaseSymbol = "";
+    private List<string> pendingDiacritics = new();
     private SelectionMode selectionMode = SelectionMode.Detailed;
     public PhonologyPage() : this(new ConlangProject(), null)
     {
@@ -88,38 +86,19 @@ public class PhonologyPage : UserControl
     {
         FlowLayoutPanel section = new()
         {
-            FlowDirection = FlowDirection.TopDown,
-            WrapContents = false,
-            AutoSize = true,
-            Margin = new Padding(0)
+            FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoSize = true, Margin = new Padding(0)
         };
         Label sectionTitle = new()
         {
-            Text = "音素清单  Phoneme Inventory",
-            AutoSize = true,
-            Font = new Font("Microsoft YaHei UI", 14)
+            Text = "音素清单  Phoneme Inventory", AutoSize = true, Font = new Font("Microsoft YaHei UI", 14)
         };
-        FlowLayoutPanel sectionHeader = new()
-        {
-            FlowDirection = FlowDirection.LeftToRight,
-            AutoSize = true
-        };
+        FlowLayoutPanel sectionHeader = new() { FlowDirection = FlowDirection.LeftToRight, AutoSize = true };
         FlowLayoutPanel inputRow = new()
         {
-            FlowDirection = FlowDirection.LeftToRight,
-            AutoSize = true,
-            Margin = new Padding(0, 10, 0, 10)
+            FlowDirection = FlowDirection.LeftToRight, AutoSize = true, Margin = new Padding(0, 10, 0, 10)
         };
-        Label consonantTitle = new()
-        {
-            Text = "辅音  Consonants",
-            AutoSize = true
-        };
-        Label vowelTitle = new()
-        {
-            Text = "元音  Vowels",
-            AutoSize = true
-        };
+        Label consonantTitle = new() { Text = "辅音  Consonants", AutoSize = true };
+        Label vowelTitle = new() { Text = "元音  Vowels", AutoSize = true };
         TableLayoutPanel phonemeLists = new()
         {
             ColumnCount = 3,
@@ -134,11 +113,7 @@ public class PhonologyPage : UserControl
         phonemeLists.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 725));
         phonemeLists.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         phonemeLists.RowStyles.Add(new RowStyle(SizeType.Absolute, 180));
-        Panel bottomSpacer = new()
-        {
-            Size = new Size(1, 60),
-            Margin = new Padding(0)
-        };
+        Panel bottomSpacer = new() { Size = new Size(1, 60), Margin = new Padding(0) };
         ConfigureSelectionModeButton();
         ConfigureNoMatchingPhonemeLabel();
         ConfigureIpaSymbolPicker();
@@ -352,308 +327,452 @@ public class PhonologyPage : UserControl
         phonemeInput.Width = 180;
         phonemeInput.Font = new Font("Microsoft YaHei UI", 12);
         phonemeInput.Margin = new Padding(0, 3, 6, 0);
-        phonemeInput.TextChanged += (sender, e) => UpdateFeaturesFromSymbol();
+        phonemeInput.TextChanged += (sender, e) =>
+        {
+            UpdateFeaturesFromSymbol();
+            UpdateDiacriticButtonState();
+        };
     }
     private void ConfigureActionButtons()
     {
         // Diacritics
-        diacriticButton.Text =
-            "附加符号  Diacritics…";
-
-        diacriticButton.Width =
-            160;
-
-        diacriticButton.Height =
-            phonemeType.PreferredHeight;
-
-        diacriticButton.Font =
-            new Font(
-                "Microsoft YaHei UI",
-                9);
-
-        diacriticButton.Margin =
-            new Padding(
-                0,
-                3,
-                6,
-                0);
+        diacriticButton.Text = "附加符号  Diacritics…";
+        diacriticButton.Width = 160;
+        diacriticButton.Height = phonemeType.PreferredHeight;
+        diacriticButton.Font = new Font("Microsoft YaHei UI", 9);
+        diacriticButton.Margin = new Padding(0, 3, 6, 0);
 
         // 只有当前输入是普通辅音或元音时才能使用。
-        diacriticButton.Enabled =
-            false;
-
-        diacriticButton.Click +=
-            OpenDiacriticComposer;
-
+        diacriticButton.Enabled = false;
+        diacriticButton.Click += OpenDiacriticComposer;
 
         // Add
-        addPhonemeButton.Text =
-            "添加";
-
-        addPhonemeButton.Width =
-            100;
-
-        addPhonemeButton.Height =
-            phonemeType.PreferredHeight;
-
-        addPhonemeButton.Font =
-            new Font(
-                "Microsoft YaHei UI",
-                10);
-
-        addPhonemeButton.Margin =
-            new Padding(
-                0,
-                3,
-                6,
-                0);
-
-        addPhonemeButton.Click +=
-            AddPhoneme;
-
+        addPhonemeButton.Text = "添加";
+        addPhonemeButton.Width = 100;
+        addPhonemeButton.Height = phonemeType.PreferredHeight;
+        addPhonemeButton.Font = new Font("Microsoft YaHei UI", 10);
+        addPhonemeButton.Margin = new Padding(0, 3, 6, 0);
+        addPhonemeButton.Click += AddPhoneme;
 
         // Remove
-        removePhonemeButton.Text =
-            "删除";
-
-        removePhonemeButton.Width =
-            100;
-
-        removePhonemeButton.Height =
-            phonemeType.PreferredHeight;
-
-        removePhonemeButton.Font =
-            new Font(
-                "Microsoft YaHei UI",
-                10);
-
-        removePhonemeButton.Margin =
-            new Padding(
-                0,
-                3,
-                0,
-                0);
-
-        removePhonemeButton.Click +=
-            RemovePhoneme;
+        removePhonemeButton.Text = "删除";
+        removePhonemeButton.Width = 100;
+        removePhonemeButton.Height = phonemeType.PreferredHeight;
+        removePhonemeButton.Font = new Font("Microsoft YaHei UI", 10);
+        removePhonemeButton.Margin = new Padding(0, 3, 0, 0);
+        removePhonemeButton.Click += RemovePhoneme;
     }
     // 打开 IPA Diacritic Composer。
-    private void OpenDiacriticComposer(
-        object? sender,
-        EventArgs e)
+    // 打开 IPA Diacritic Composer。
+    // 如果清单中选中了已有音素，则进入编辑模式；
+    // 否则为输入框中的基础音素创建新组合。
+    private void OpenDiacriticComposer(object? sender, EventArgs e)
     {
-        string baseSymbol =
-            NormalizeInputSymbol(
-                phonemeInput.Text);
+        // 优先编辑清单中当前选中的普通辅音或元音。
+        if (TryEditSelectedInventoryPhoneme()) return;
 
-
-        if (baseSymbol.Length == 0)
-        {
+        // 没有可编辑的清单项目时，
+        // 按原来的方式为输入框中的基础音素添加 Diacritics。
+        var baseSymbol = NormalizeInputSymbol(phonemeInput.Text);
+        if (baseSymbol.Length == 0) return;
+        var validBase = phonemeType.SelectedIndex == 0
+            ? IpaConsonants.All.Any(x => IpaComposer.AreEquivalent(x.Symbol, baseSymbol))
+            : IpaVowels.All.Any(x => IpaComposer.AreEquivalent(x.Symbol, baseSymbol));
+        if (!validBase) return;
+        using DiacriticComposerDialog dialog = new(baseSymbol);
+        if (dialog.ShowDialog(this) != DialogResult.OK)
             return;
-        }
 
+        // 创建新音素时，如果没有选择任何附加符号，
+        // 就保持原来的基础音素。
+        if (dialog.SelectedDiacritics.Count == 0) return;
+        pendingBaseSymbol = baseSymbol;
+        pendingDiacritics = new List<string>(dialog.SelectedDiacritics);
+        var wasSynchronizing = isSynchronizingSelection;
+        isSynchronizingSelection = true;
+        phonemeInput.Text = dialog.ResultSymbol;
+        phonemeInput.SelectionStart = phonemeInput.Text.Length;
+        isSynchronizingSelection = wasSynchronizing;
+        noMatchingPhonemeLabel.Visible = false;
+        addPhonemeButton.Enabled = true;
 
-        // 第一版只支持普通肺部辅音和元音。
-        bool validBase =
-            phonemeType.SelectedIndex == 0
-                ? IpaConsonants.All.Any(
-                    x =>
-                        IpaComposer.AreEquivalent(
-                            x.Symbol,
-                            baseSymbol))
-                : IpaVowels.All.Any(
-                    x =>
-                        IpaComposer.AreEquivalent(
-                            x.Symbol,
-                            baseSymbol));
-
-
-        if (!validBase)
-        {
-            return;
-        }
-
-
-        using DiacriticComposerDialog dialog =
-            new(baseSymbol);
-
-
-        if (dialog.ShowDialog(this) !=
-            DialogResult.OK)
-        {
-            return;
-        }
-
-
-        // 没选择任何附加符号时，
-        // 保持原来的基础音素。
-        if (dialog.SelectedDiacritics.Count == 0)
-        {
-            return;
-        }
-
-
-        pendingBaseSymbol =
-            baseSymbol;
-
-        pendingDiacritics =
-            new List<string>(
-                dialog.SelectedDiacritics);
-
-
-        // 更新输入框时暂时阻止普通 IPA 校验，
-        // 因为 pʰ / ã 等不会直接存在于基础数据库中。
-        bool wasSynchronizing =
-            isSynchronizingSelection;
-
-        isSynchronizingSelection =
-            true;
-
-
-        phonemeInput.Text =
-            dialog.ResultSymbol;
-
-        phonemeInput.SelectionStart =
-            phonemeInput.Text.Length;
-
-
-        isSynchronizingSelection =
-            wasSynchronizing;
-
-
-        noMatchingPhonemeLabel.Visible =
-            false;
-
-        addPhonemeButton.Enabled =
-            true;
-
-
-        // 第一版组合完成以后要求直接 Add。
-        // 避免再次打开 Composer 丢失第一次选择。
-        diacriticButton.Enabled =
-            false;
+        // 新组合生成后先 Add，
+        // 避免继续编辑尚未进入项目的数据。
+        diacriticButton.Enabled = false;
     }
-
 
     // 判断输入框当前内容是否就是正在等待添加的组合音素。
-    private bool HasPendingComposition(
-        string symbol)
+    private bool HasPendingComposition(string symbol)
     {
-        if (pendingBaseSymbol.Length == 0 ||
-            pendingDiacritics.Count == 0)
-        {
+        if (pendingBaseSymbol.Length == 0 || pendingDiacritics.Count == 0)
             return false;
-        }
-
-
-        string composed =
-            IpaComposer.Compose(
-                pendingBaseSymbol,
-                pendingDiacritics);
-
-
-        return
-            IpaComposer.AreEquivalent(
-                symbol,
-                composed);
+        var composed = IpaComposer.Compose(pendingBaseSymbol, pendingDiacritics);
+        return IpaComposer.AreEquivalent(symbol, composed);
     }
-
 
     // 清除暂存的组合音素。
     private void ClearPendingComposition()
     {
-        pendingBaseSymbol =
-            "";
-
+        pendingBaseSymbol = "";
         pendingDiacritics.Clear();
+    }
+
+    // 检查清单中是否有可以编辑 Diacritics 的音素。
+    // 返回 true 表示本次点击已经作为“编辑已有音素”处理。
+    private bool TryEditSelectedInventoryPhoneme()
+    {
+        // 辅音
+        if (consonantList.SelectedItem is ConsonantEntry consonantEntry)
+        {
+            var consonant =
+                project.Phonology.Consonants.FirstOrDefault(x =>
+                    IpaComposer.AreEquivalent(x.Symbol, consonantEntry.Symbol));
+            if (consonant == null) return false;
+            var baseSymbol = string.IsNullOrWhiteSpace(consonant.BaseSymbol) ? consonant.Symbol : consonant.BaseSymbol;
+
+            // 目前只允许编辑普通 pulmonic consonant。
+            // NP 与 Other Symbols 暂时不进入这个 Composer。
+            var validBase = IpaConsonants.All.Any(x => IpaComposer.AreEquivalent(x.Symbol, baseSymbol));
+            if (!validBase) return false;
+            EditConsonantDiacritics(consonant, consonantEntry, baseSymbol);
+            return true;
+        }
+
+        // 元音
+        if (vowelList.SelectedItem is VowelEntry vowelEntry)
+        {
+            var vowel = project.Phonology.Vowels.FirstOrDefault(x =>
+                IpaComposer.AreEquivalent(x.Symbol, vowelEntry.Symbol));
+            if (vowel == null) return false;
+            var baseSymbol = string.IsNullOrWhiteSpace(vowel.BaseSymbol) ? vowel.Symbol : vowel.BaseSymbol;
+            var validBase = IpaVowels.All.Any(x => IpaComposer.AreEquivalent(x.Symbol, baseSymbol));
+            if (!validBase) return false;
+            EditVowelDiacritics(vowel, vowelEntry, baseSymbol);
+            return true;
+        }
+        return false;
+    }
+
+    // 编辑已经存在的辅音。
+    private void EditConsonantDiacritics(ConsonantPhoneme consonant, ConsonantEntry entry, string baseSymbol)
+    {
+        using DiacriticComposerDialog dialog = new(baseSymbol, consonant.Diacritics);
+        if (dialog.ShowDialog(this) != DialogResult.OK)
+            return;
+        var newSymbol = NormalizeInputSymbol(dialog.ResultSymbol);
+
+        // 编辑后的符号不能与另一个已经存在的辅音重复。
+        var duplicate = project.Phonology.Consonants.Any(existing =>
+            !ReferenceEquals(existing, consonant) && IpaComposer.AreEquivalent(existing.Symbol, newSymbol));
+        if (duplicate)
+        {
+            MessageBox.Show(this, "该音素已经存在。\n\n" + "This phoneme already exists.", "重复音素  Duplicate phoneme",
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+        consonant.Symbol = newSymbol;
+        consonant.BaseSymbol = baseSymbol;
+        consonant.Diacritics = new List<string>(dialog.SelectedDiacritics);
+        entry.Symbol = newSymbol;
+        var index = consonantList.Items.IndexOf(entry);
+        if (index >= 0)
+        {
+            // 重新赋值，让 ListBox 立即重新调用 ToString()。
+            consonantList.Items[index] = entry;
+            consonantList.SelectedIndex = index;
+        }
+        RefreshConsonantChart();
+        projectModified?.Invoke();
+        UpdateDiacriticButtonState();
+    }
+
+    // 编辑已经存在的元音。
+    private void EditVowelDiacritics(VowelPhoneme vowel, VowelEntry entry, string baseSymbol)
+    {
+        using DiacriticComposerDialog dialog = new(baseSymbol, vowel.Diacritics);
+        if (dialog.ShowDialog(this) != DialogResult.OK)
+            return;
+        var newSymbol = NormalizeInputSymbol(dialog.ResultSymbol);
+
+        // 编辑后的符号不能与另一个已经存在的元音重复。
+        var duplicate = project.Phonology.Vowels.Any(existing =>
+            !ReferenceEquals(existing, vowel) && IpaComposer.AreEquivalent(existing.Symbol, newSymbol));
+        if (duplicate)
+        {
+            MessageBox.Show(this, "该音素已经存在。\n\n" + "This phoneme already exists.", "重复音素  Duplicate phoneme",
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+        vowel.Symbol = newSymbol;
+        vowel.BaseSymbol = baseSymbol;
+        vowel.Diacritics = new List<string>(dialog.SelectedDiacritics);
+        entry.Symbol = newSymbol;
+        var index = vowelList.Items.IndexOf(entry);
+        if (index >= 0)
+        {
+            vowelList.Items[index] = entry;
+            vowelList.SelectedIndex = index;
+        }
+        RefreshVowelChart();
+        projectModified?.Invoke();
+        UpdateDiacriticButtonState();
+    }
+
+    // 根据清单选择和输入框状态决定
+    // Diacritics 按钮当前是“创建”还是“编辑”。
+    private void UpdateDiacriticButtonState()
+    {
+        // 选中了辅音清单中的项目。
+        if (consonantList.SelectedItem is ConsonantEntry consonantEntry)
+        {
+            var consonant =
+                project.Phonology.Consonants.FirstOrDefault(x =>
+                    IpaComposer.AreEquivalent(x.Symbol, consonantEntry.Symbol));
+            if (consonant != null)
+            {
+                var baseSymbol = string.IsNullOrWhiteSpace(consonant.BaseSymbol)
+                    ? consonant.Symbol
+                    : consonant.BaseSymbol;
+                var editable = IpaConsonants.All.Any(x => IpaComposer.AreEquivalent(x.Symbol, baseSymbol));
+                if (editable)
+                {
+                    diacriticButton.Text = "编辑附加符号  Edit…";
+                    diacriticButton.Enabled = true;
+                    return;
+                }
+            }
+
+            // NP / Other Symbols 暂时不可编辑。
+            diacriticButton.Text = "附加符号  Diacritics…";
+            diacriticButton.Enabled = false;
+            return;
+        }
+
+        // 选中了元音清单中的项目。
+        if (vowelList.SelectedItem is VowelEntry vowelEntry)
+        {
+            var vowel = project.Phonology.Vowels.FirstOrDefault(x =>
+                IpaComposer.AreEquivalent(x.Symbol, vowelEntry.Symbol));
+            if (vowel != null)
+            {
+                var baseSymbol = string.IsNullOrWhiteSpace(vowel.BaseSymbol) ? vowel.Symbol : vowel.BaseSymbol;
+                var editable = IpaVowels.All.Any(x => IpaComposer.AreEquivalent(x.Symbol, baseSymbol));
+                if (editable)
+                {
+                    diacriticButton.Text = "编辑附加符号  Edit…";
+                    diacriticButton.Enabled = true;
+                    return;
+                }
+            }
+            diacriticButton.Text = "附加符号  Diacritics…";
+            diacriticButton.Enabled = false;
+            return;
+        }
+
+        // 没有选中清单项目：
+        // 回到原来的“创建新组合音素”模式。
+        diacriticButton.Text = "附加符号  Diacritics…";
+        var input = NormalizeInputSymbol(phonemeInput.Text);
+        if (input.Length == 0 || HasPendingComposition(input))
+        {
+            diacriticButton.Enabled = false;
+            return;
+        }
+        if (phonemeType.SelectedIndex == 0)
+        {
+            diacriticButton.Enabled = IpaConsonants.All.Any(x => IpaComposer.AreEquivalent(x.Symbol, input));
+            return;
+        }
+        diacriticButton.Enabled = IpaVowels.All.Any(x => IpaComposer.AreEquivalent(x.Symbol, input));
     }
     private void ConfigurePhonemeLists()
     {
-        consonantList.Size = new Size(725, 180);
-        consonantList.Font = new Font("Microsoft YaHei UI", 12);
-        vowelList.Size = new Size(725, 180);
-        vowelList.Font = new Font("Microsoft YaHei UI", 12);
+        consonantList.Size =
+            new Size(
+                725,
+                180);
 
-        // 记录上一次真正完成点击选择的项目。
-        // 不再使用 MouseDown 时的 SelectedIndex，
-        // 因为 WinForms 可能已经在 MouseDown 前更新了选择。
-        var lastConsonantClickedIndex = -1;
-        var lastVowelClickedIndex = -1;
+        consonantList.Font =
+            new Font(
+                "Microsoft YaHei UI",
+                12);
 
-        // 如果选择通过键盘、删除或其他方式发生改变，
-        // 就取消之前的“再次点击”记录。
-        consonantList.SelectedIndexChanged += (sender, e) =>
-        {
-            if (consonantList.SelectedIndex != lastConsonantClickedIndex)
-                lastConsonantClickedIndex = -1;
-        };
-        vowelList.SelectedIndexChanged += (sender, e) =>
-        {
-            if (vowelList.SelectedIndex != lastVowelClickedIndex)
-                lastVowelClickedIndex = -1;
-        };
-        consonantList.MouseClick += (sender, e) =>
-        {
-            if (e.Button != MouseButtons.Left) return;
-            var clickedIndex = consonantList.IndexFromPoint(e.Location);
 
-            // 点击清单空白处：取消选择。
-            if (clickedIndex == ListBox.NoMatches)
+        vowelList.Size =
+            new Size(
+                725,
+                180);
+
+        vowelList.Font =
+            new Font(
+                "Microsoft YaHei UI",
+                12);
+
+
+        var lastConsonantClickedIndex =
+            -1;
+
+        var lastVowelClickedIndex =
+            -1;
+
+
+        consonantList.SelectedIndexChanged +=
+            (sender, e) =>
             {
-                consonantList.ClearSelected();
-                lastConsonantClickedIndex = -1;
-                return;
-            }
+                if (consonantList.SelectedIndex !=
+                    lastConsonantClickedIndex)
+                {
+                    lastConsonantClickedIndex =
+                        -1;
+                }
 
-            // 再次点击当前已经选中的同一个辅音：
-            // 取消选择。
-            if (clickedIndex == lastConsonantClickedIndex && consonantList.SelectedIndex == clickedIndex)
+
+                UpdateDiacriticButtonState();
+            };
+
+
+        vowelList.SelectedIndexChanged +=
+            (sender, e) =>
             {
-                consonantList.ClearSelected();
-                lastConsonantClickedIndex = -1;
-                return;
-            }
+                if (vowelList.SelectedIndex !=
+                    lastVowelClickedIndex)
+                {
+                    lastVowelClickedIndex =
+                        -1;
+                }
 
-            // 第一次点击或者切换到另一项：
-            // 正常保持蓝色选择状态。
-            consonantList.SelectedIndex = clickedIndex;
-            lastConsonantClickedIndex = clickedIndex;
 
-            // 辅音和元音清单不能同时保持选择。
-            vowelList.ClearSelected();
-            lastVowelClickedIndex = -1;
-        };
-        vowelList.MouseClick += (sender, e) =>
-        {
-            if (e.Button != MouseButtons.Left) return;
-            var clickedIndex = vowelList.IndexFromPoint(e.Location);
+                UpdateDiacriticButtonState();
+            };
 
-            // 点击清单空白处：取消选择。
-            if (clickedIndex == ListBox.NoMatches)
+
+        consonantList.MouseClick +=
+            (sender, e) =>
             {
+                if (e.Button !=
+                    MouseButtons.Left)
+                {
+                    return;
+                }
+
+
+                var clickedIndex =
+                    consonantList.IndexFromPoint(
+                        e.Location);
+
+
+                // 点击空白区域：取消选择。
+                if (clickedIndex ==
+                    ListBox.NoMatches)
+                {
+                    consonantList.ClearSelected();
+
+                    lastConsonantClickedIndex =
+                        -1;
+
+                    UpdateDiacriticButtonState();
+
+                    return;
+                }
+
+
+                // 再次点击同一个辅音：取消选择。
+                if (clickedIndex ==
+                        lastConsonantClickedIndex &&
+                    consonantList.SelectedIndex ==
+                        clickedIndex)
+                {
+                    consonantList.ClearSelected();
+
+                    lastConsonantClickedIndex =
+                        -1;
+
+                    UpdateDiacriticButtonState();
+
+                    return;
+                }
+
+
+                consonantList.SelectedIndex =
+                    clickedIndex;
+
+                lastConsonantClickedIndex =
+                    clickedIndex;
+
+
+                // 两边不能同时选中。
                 vowelList.ClearSelected();
-                lastVowelClickedIndex = -1;
-                return;
-            }
 
-            // 再次点击当前已经选中的同一个元音：
-            // 取消选择。
-            if (clickedIndex == lastVowelClickedIndex && vowelList.SelectedIndex == clickedIndex)
+                lastVowelClickedIndex =
+                    -1;
+
+
+                UpdateDiacriticButtonState();
+            };
+
+
+        vowelList.MouseClick +=
+            (sender, e) =>
             {
-                vowelList.ClearSelected();
-                lastVowelClickedIndex = -1;
-                return;
-            }
+                if (e.Button !=
+                    MouseButtons.Left)
+                {
+                    return;
+                }
 
-            // 第一次点击或者切换到另一项：
-            // 正常保持蓝色选择状态。
-            vowelList.SelectedIndex = clickedIndex;
-            lastVowelClickedIndex = clickedIndex;
 
-            // 辅音和元音清单不能同时保持选择。
-            consonantList.ClearSelected();
-            lastConsonantClickedIndex = -1;
-        };
+                var clickedIndex =
+                    vowelList.IndexFromPoint(
+                        e.Location);
+
+
+                // 点击空白区域：取消选择。
+                if (clickedIndex ==
+                    ListBox.NoMatches)
+                {
+                    vowelList.ClearSelected();
+
+                    lastVowelClickedIndex =
+                        -1;
+
+                    UpdateDiacriticButtonState();
+
+                    return;
+                }
+
+
+                // 再次点击同一个元音：取消选择。
+                if (clickedIndex ==
+                        lastVowelClickedIndex &&
+                    vowelList.SelectedIndex ==
+                        clickedIndex)
+                {
+                    vowelList.ClearSelected();
+
+                    lastVowelClickedIndex =
+                        -1;
+
+                    UpdateDiacriticButtonState();
+
+                    return;
+                }
+
+
+                vowelList.SelectedIndex =
+                    clickedIndex;
+
+                lastVowelClickedIndex =
+                    clickedIndex;
+
+
+                consonantList.ClearSelected();
+
+                lastConsonantClickedIndex =
+                    -1;
+
+
+                UpdateDiacriticButtonState();
+            };
     }
     private void ConfigureNoMatchingPhonemeLabel()
     {
@@ -667,73 +786,28 @@ public class PhonologyPage : UserControl
     // 普通肺部辅音表。
     private Control BuildConsonantChart()
     {
-        Panel chartContainer = new()
-        {
-            Width = 1480,
-            AutoScroll = true,
-            Margin = new Padding(0, 15, 0, 25)
-        };
+        Panel chartContainer = new() { Width = 1480, AutoScroll = true, Margin = new Padding(0, 15, 0, 25) };
         string[] places =
         {
-            "双唇\nBilabial",
-            "唇齿\nLabiodental",
-            "齿\nDental",
-            "齿龈\nAlveolar",
-            "龈后\nPostalveolar",
-            "龈腭\nAlveolo-palatal",
-            "卷舌\nRetroflex",
-            "硬腭\nPalatal",
-            "唇硬腭\nLabial-palatal",
-            "软腭\nVelar",
-            "小舌\nUvular",
-            "咽\nPharyngeal",
-            "会厌\nEpiglottal",
-            "声门\nGlottal",
-            "唇软腭\nLabial-velar"
+            "双唇\nBilabial", "唇齿\nLabiodental", "齿\nDental", "齿龈\nAlveolar", "龈后\nPostalveolar",
+            "龈腭\nAlveolo-palatal", "卷舌\nRetroflex", "硬腭\nPalatal", "唇硬腭\nLabial-palatal", "软腭\nVelar", "小舌\nUvular",
+            "咽\nPharyngeal", "会厌\nEpiglottal", "声门\nGlottal", "唇软腭\nLabial-velar"
         };
         string[] placeKeys =
         {
-            "双唇  Bilabial",
-            "唇齿  Labiodental",
-            "齿  Dental",
-            "齿龈  Alveolar",
-            "龈后  Postalveolar",
-            "龈腭  Alveolo-palatal",
-            "卷舌  Retroflex",
-            "硬腭  Palatal",
-            "唇硬腭  Labial-palatal",
-            "软腭  Velar",
-            "小舌  Uvular",
-            "咽  Pharyngeal",
-            "会厌  Epiglottal",
-            "声门  Glottal",
-            "唇软腭  Labial-velar"
+            "双唇  Bilabial", "唇齿  Labiodental", "齿  Dental", "齿龈  Alveolar", "龈后  Postalveolar",
+            "龈腭  Alveolo-palatal", "卷舌  Retroflex", "硬腭  Palatal", "唇硬腭  Labial-palatal", "软腭  Velar", "小舌  Uvular",
+            "咽  Pharyngeal", "会厌  Epiglottal", "声门  Glottal", "唇软腭  Labial-velar"
         };
         string[] manners =
         {
-            "塞音\nPlosive",
-            "塞擦音\nAffricate",
-            "鼻音\nNasal",
-            "颤音\nTrill",
-            "闪音\nTap / Flap",
-            "边闪音\nLateral flap",
-            "擦音\nFricative",
-            "边擦音\nLateral fricative",
-            "近音\nApproximant",
-            "边近音\nLateral approximant"
+            "塞音\nPlosive", "塞擦音\nAffricate", "鼻音\nNasal", "颤音\nTrill", "闪音\nTap / Flap", "边闪音\nLateral flap",
+            "擦音\nFricative", "边擦音\nLateral fricative", "近音\nApproximant", "边近音\nLateral approximant"
         };
         string[] mannerKeys =
         {
-            "塞音  Plosive",
-            "塞擦音  Affricate",
-            "鼻音  Nasal",
-            "颤音  Trill",
-            "闪音  Tap / Flap",
-            "边闪音  Lateral flap",
-            "擦音  Fricative",
-            "边擦音  Lateral fricative",
-            "近音  Approximant",
-            "边近音  Lateral approximant"
+            "塞音  Plosive", "塞擦音  Affricate", "鼻音  Nasal", "颤音  Trill", "闪音  Tap / Flap", "边闪音  Lateral flap",
+            "擦音  Fricative", "边擦音  Lateral fricative", "近音  Approximant", "边近音  Lateral approximant"
         };
         consonantChart.Controls.Clear();
         consonantChart.ColumnStyles.Clear();
@@ -774,23 +848,12 @@ public class PhonologyPage : UserControl
             {
                 TableLayoutPanel cell = new()
                 {
-                    Dock = DockStyle.Fill,
-                    ColumnCount = 2,
-                    RowCount = 1,
-                    Margin = new Padding(0)
+                    Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Margin = new Padding(0)
                 };
                 cell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
                 cell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-                Label voiceless = new()
-                {
-                    Dock = DockStyle.Fill,
-                    TextAlign = ContentAlignment.MiddleCenter
-                };
-                Label voiced = new()
-                {
-                    Dock = DockStyle.Fill,
-                    TextAlign = ContentAlignment.MiddleCenter
-                };
+                Label voiceless = new() { Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleCenter };
+                Label voiced = new() { Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleCenter };
                 consonantChartCells[(placeKeys[column], mannerKeys[row], "清音  Voiceless")] = voiceless;
                 consonantChartCells[(placeKeys[column], mannerKeys[row], "浊音  Voiced")] = voiced;
                 cell.Controls.Add(voiceless, 0, 0);
@@ -831,12 +894,7 @@ public class PhonologyPage : UserControl
     // Non-pulmonic + Other IPA Symbols。
     private Control BuildNonPulmonicChart()
     {
-        Panel container = new()
-        {
-            Width = 650,
-            Height = 400,
-            Margin = new Padding(0)
-        };
+        Panel container = new() { Width = 650, Height = 400, Margin = new Padding(0) };
         Label title = new()
         {
             Text = "非肺部气流辅音  " + "Non-pulmonic consonants",
@@ -844,18 +902,8 @@ public class PhonologyPage : UserControl
             AutoSize = true,
             Font = new Font("Microsoft YaHei UI", 11, FontStyle.Bold)
         };
-        string[] categoryKeys =
-        {
-            "搭嘴音  Click",
-            "浊内爆音  Voiced implosive",
-            "挤喉音  Ejective"
-        };
-        string[] categoryTitles =
-        {
-            "搭嘴音\nClicks",
-            "浊内爆音\nVoiced implosives",
-            "挤喉音\nEjectives"
-        };
+        string[] categoryKeys = { "搭嘴音  Click", "浊内爆音  Voiced implosive", "挤喉音  Ejective" };
+        string[] categoryTitles = { "搭嘴音\nClicks", "浊内爆音\nVoiced implosives", "挤喉音\nEjectives" };
         nonPulmonicChart.Controls.Clear();
         nonPulmonicChart.ColumnStyles.Clear();
         nonPulmonicChart.RowStyles.Clear();
@@ -916,12 +964,7 @@ public class PhonologyPage : UserControl
     // IPA 元音梯形图。
     private Control BuildVowelChart()
     {
-        Panel chartContainer = new()
-        {
-            Width = 800,
-            Height = 400,
-            Margin = new Padding(0)
-        };
+        Panel chartContainer = new() { Width = 800, Height = 400, Margin = new Padding(0) };
         vowelChart.Size = new Size(790, 390);
         vowelChart.Location = new Point(0, 0);
         vowelChartCells.Clear();
@@ -1185,136 +1228,55 @@ public class PhonologyPage : UserControl
 
     // 把普通辅音同步到输入框和各个选择器。
     // 成功选择普通辅音时，同时清除旧的错误状态。
-    private void ApplyConsonant(
-        IpaConsonant consonant)
+    private void ApplyConsonant(IpaConsonant consonant)
     {
         ClearPendingComposition();
-
-
-        var wasSynchronizing =
-            isSynchronizingSelection;
-
-        isSynchronizingSelection =
-            true;
-
-
-        phonemeType.SelectedIndex =
-            0;
-
-        phonemeInput.Text =
-            consonant.Symbol;
-
-        phonemeInput.SelectionStart =
-            phonemeInput.Text.Length;
-
-
-        consonantPlace.SelectedItem =
-            consonant.Place;
-
-        consonantManner.SelectedItem =
-            consonant.Manner;
-
-        consonantVoicing.SelectedItem =
-            consonant.Voicing;
-
-
-        SelectDetailedConsonant(
-            consonant);
-
-        SelectGuidedConsonant(
-            consonant);
-
-
-        isSynchronizingSelection =
-            wasSynchronizing;
-
-
-        noMatchingPhonemeLabel.Visible =
-            false;
-
-        addPhonemeButton.Enabled =
-            true;
-
-        diacriticButton.Enabled =
-            true;
+        var wasSynchronizing = isSynchronizingSelection;
+        isSynchronizingSelection = true;
+        phonemeType.SelectedIndex = 0;
+        phonemeInput.Text = consonant.Symbol;
+        phonemeInput.SelectionStart = phonemeInput.Text.Length;
+        consonantPlace.SelectedItem = consonant.Place;
+        consonantManner.SelectedItem = consonant.Manner;
+        consonantVoicing.SelectedItem = consonant.Voicing;
+        SelectDetailedConsonant(consonant);
+        SelectGuidedConsonant(consonant);
+        isSynchronizingSelection = wasSynchronizing;
+        noMatchingPhonemeLabel.Visible = false;
+        addPhonemeButton.Enabled = true;
+        diacriticButton.Enabled = true;
     }
-    private void ApplyNonPulmonicConsonant(
-        IpaNonPulmonicConsonant consonant)
+    private void ApplyNonPulmonicConsonant(IpaNonPulmonicConsonant consonant)
     {
         ClearPendingComposition();
-
-
-        var wasSynchronizing =
-            isSynchronizingSelection;
-
-        isSynchronizingSelection =
-            true;
-
-
-        phonemeType.SelectedIndex =
-            0;
-
-        phonemeInput.Text =
-            consonant.Symbol;
-
-        phonemeInput.SelectionStart =
-            phonemeInput.Text.Length;
-
-
-        isSynchronizingSelection =
-            wasSynchronizing;
-
-
-        noMatchingPhonemeLabel.Visible =
-            false;
-
-        addPhonemeButton.Enabled =
-            true;
-
+        var wasSynchronizing = isSynchronizingSelection;
+        isSynchronizingSelection = true;
+        phonemeType.SelectedIndex = 0;
+        phonemeInput.Text = consonant.Symbol;
+        phonemeInput.SelectionStart = phonemeInput.Text.Length;
+        isSynchronizingSelection = wasSynchronizing;
+        noMatchingPhonemeLabel.Visible = false;
+        addPhonemeButton.Enabled = true;
 
         // NP 的 Diacritics 下一阶段再接。
-        diacriticButton.Enabled =
-            false;
+        diacriticButton.Enabled = false;
     }
 
     // Other IPA Symbol → 输入框。
-    private void ApplyOtherSymbol(
-        IpaOtherSymbol symbol)
+    private void ApplyOtherSymbol(IpaOtherSymbol symbol)
     {
         ClearPendingComposition();
-
-
-        var wasSynchronizing =
-            isSynchronizingSelection;
-
-        isSynchronizingSelection =
-            true;
-
-
-        phonemeType.SelectedIndex =
-            0;
-
-        phonemeInput.Text =
-            symbol.Symbol;
-
-        phonemeInput.SelectionStart =
-            phonemeInput.Text.Length;
-
-
-        isSynchronizingSelection =
-            wasSynchronizing;
-
-
-        noMatchingPhonemeLabel.Visible =
-            false;
-
-        addPhonemeButton.Enabled =
-            true;
-
+        var wasSynchronizing = isSynchronizingSelection;
+        isSynchronizingSelection = true;
+        phonemeType.SelectedIndex = 0;
+        phonemeInput.Text = symbol.Symbol;
+        phonemeInput.SelectionStart = phonemeInput.Text.Length;
+        isSynchronizingSelection = wasSynchronizing;
+        noMatchingPhonemeLabel.Visible = false;
+        addPhonemeButton.Enabled = true;
 
         // Other Symbols 暂时不进入 composer。
-        diacriticButton.Enabled =
-            false;
+        diacriticButton.Enabled = false;
     }
     private void SelectDetailedConsonant(IpaConsonant consonant)
     {
@@ -1364,24 +1326,15 @@ public class PhonologyPage : UserControl
         var symbol = phonemeInput.Text.Trim();
         return IpaOtherSymbols.All.FirstOrDefault(x => x.Symbol == symbol);
     }
-    private static string NormalizeInputSymbol(
-        string symbol)
+    private static string NormalizeInputSymbol(string symbol)
     {
-        symbol =
-            symbol.Trim();
-
+        symbol = symbol.Trim();
 
         // 普通键盘 g → IPA ɡ。
-        if (symbol == "g")
-        {
-            symbol = "ɡ";
-        }
-
+        if (symbol == "g") symbol = "ɡ";
 
         // 同时执行 Unicode NFC 规范化。
-        return
-            IpaComposer.NormalizeSymbol(
-                symbol);
+        return IpaComposer.NormalizeSymbol(symbol);
     }
     private void UpdateSymbolFromFeatures()
     {
@@ -1451,58 +1404,23 @@ public class PhonologyPage : UserControl
 
     // 把元音同步到输入框和各个选择器。
     // 成功选择元音时，同时清除旧的错误状态。
-    private void ApplyVowel(
-        IpaVowel vowel)
+    private void ApplyVowel(IpaVowel vowel)
     {
         ClearPendingComposition();
-
-
-        var wasSynchronizing =
-            isSynchronizingSelection;
-
-        isSynchronizingSelection =
-            true;
-
-
-        phonemeType.SelectedIndex =
-            1;
-
-        phonemeInput.Text =
-            vowel.Symbol;
-
-        phonemeInput.SelectionStart =
-            phonemeInput.Text.Length;
-
-
-        vowelHeight.SelectedItem =
-            vowel.Height;
-
-        vowelBackness.SelectedItem =
-            vowel.Backness;
-
-        vowelRoundedness.SelectedItem =
-            vowel.Roundedness;
-
-
-        SelectListVowel(
-            vowel);
-
-        SelectGuidedVowel(
-            vowel);
-
-
-        isSynchronizingSelection =
-            wasSynchronizing;
-
-
-        noMatchingPhonemeLabel.Visible =
-            false;
-
-        addPhonemeButton.Enabled =
-            true;
-
-        diacriticButton.Enabled =
-            true;
+        var wasSynchronizing = isSynchronizingSelection;
+        isSynchronizingSelection = true;
+        phonemeType.SelectedIndex = 1;
+        phonemeInput.Text = vowel.Symbol;
+        phonemeInput.SelectionStart = phonemeInput.Text.Length;
+        vowelHeight.SelectedItem = vowel.Height;
+        vowelBackness.SelectedItem = vowel.Backness;
+        vowelRoundedness.SelectedItem = vowel.Roundedness;
+        SelectListVowel(vowel);
+        SelectGuidedVowel(vowel);
+        isSynchronizingSelection = wasSynchronizing;
+        noMatchingPhonemeLabel.Visible = false;
+        addPhonemeButton.Enabled = true;
+        diacriticButton.Enabled = true;
     }
     private void SelectListVowel(IpaVowel vowel)
     {
@@ -1567,160 +1485,86 @@ public class PhonologyPage : UserControl
     // 手动输入 IPA 后进行反向识别。
     private void UpdateFeaturesFromSymbol()
     {
-        if (isSynchronizingSelection)
-        {
-            return;
-        }
-
-
-        string input =
-            NormalizeInputSymbol(
-                phonemeInput.Text);
-
+        if (isSynchronizingSelection) return;
+        var input = NormalizeInputSymbol(phonemeInput.Text);
 
         // 输入为空。
         if (input.Length == 0)
         {
             ClearPendingComposition();
-
             ClearIpaSelections();
-
-            noMatchingPhonemeLabel.Visible =
-                false;
-
-            addPhonemeButton.Enabled =
-                false;
-
-            diacriticButton.Enabled =
-                false;
-
+            noMatchingPhonemeLabel.Visible = false;
+            addPhonemeButton.Enabled = false;
+            diacriticButton.Enabled = false;
             return;
         }
-
 
         // 如果这是刚刚由 Composer 创建的音素，
         // 它不需要存在于基础 IPA 数据库中。
         if (HasPendingComposition(input))
         {
-            noMatchingPhonemeLabel.Visible =
-                false;
-
-            addPhonemeButton.Enabled =
-                true;
-
-            diacriticButton.Enabled =
-                false;
-
+            noMatchingPhonemeLabel.Visible = false;
+            addPhonemeButton.Enabled = true;
+            diacriticButton.Enabled = false;
             return;
         }
-
 
         // 如果用户手动修改了已经组合好的内容，
         // 原来的 Composer 状态失效。
         ClearPendingComposition();
 
-
         // 辅音
         if (phonemeType.SelectedIndex == 0)
         {
             // 普通肺部辅音
-            var consonant =
-                FindConsonantFromInput();
-
-
+            var consonant = FindConsonantFromInput();
             if (consonant != null)
             {
-                ApplyConsonant(
-                    consonant);
-
+                ApplyConsonant(consonant);
                 return;
             }
 
-
             // Non-pulmonic
-            var nonPulmonic =
-                FindNonPulmonicConsonantFromInput();
-
-
+            var nonPulmonic = FindNonPulmonicConsonantFromInput();
             if (nonPulmonic != null)
             {
                 ClearIpaSelections();
-
-                noMatchingPhonemeLabel.Visible =
-                    false;
-
-                addPhonemeButton.Enabled =
-                    true;
-
-                diacriticButton.Enabled =
-                    false;
-
+                noMatchingPhonemeLabel.Visible = false;
+                addPhonemeButton.Enabled = true;
+                diacriticButton.Enabled = false;
                 return;
             }
 
-
             // Other IPA Symbols
-            var otherSymbol =
-                FindOtherSymbolFromInput();
-
-
+            var otherSymbol = FindOtherSymbolFromInput();
             if (otherSymbol != null)
             {
                 ClearIpaSelections();
-
-                noMatchingPhonemeLabel.Visible =
-                    false;
-
-                addPhonemeButton.Enabled =
-                    true;
-
-                diacriticButton.Enabled =
-                    false;
-
+                noMatchingPhonemeLabel.Visible = false;
+                addPhonemeButton.Enabled = true;
+                diacriticButton.Enabled = false;
                 return;
             }
 
-
             // 所有参考数据库都没有找到。
             ClearIpaSelections();
-
-            noMatchingPhonemeLabel.Visible =
-                true;
-
-            addPhonemeButton.Enabled =
-                false;
-
-            diacriticButton.Enabled =
-                false;
-
+            noMatchingPhonemeLabel.Visible = true;
+            addPhonemeButton.Enabled = false;
+            diacriticButton.Enabled = false;
             return;
         }
 
-
         // 元音
-        var vowel =
-            FindVowelFromInput();
-
-
+        var vowel = FindVowelFromInput();
         if (vowel == null)
         {
             ClearIpaSelections();
-
-            noMatchingPhonemeLabel.Visible =
-                true;
-
-            addPhonemeButton.Enabled =
-                false;
-
-            diacriticButton.Enabled =
-                false;
-
+            noMatchingPhonemeLabel.Visible = true;
+            addPhonemeButton.Enabled = false;
+            diacriticButton.Enabled = false;
             return;
         }
-
-
-        ApplyVowel(
-            vowel);
+        ApplyVowel(vowel);
     }
     private void ClearIpaSelections()
     {
@@ -1761,204 +1605,82 @@ public class PhonologyPage : UserControl
         RefreshVowelChart();
     }
     // 添加由基础音素 + Diacritics 组成的音素。
-    private bool AddPendingComposedPhoneme(
-        string phoneme)
+    private bool AddPendingComposedPhoneme(string phoneme)
     {
-        if (!HasPendingComposition(
-            phoneme))
-        {
+        if (!HasPendingComposition(phoneme))
             return false;
-        }
-
 
         // 辅音
         if (phonemeType.SelectedIndex == 0)
         {
             // 防止 Unicode 等价的重复项。
-            if (project.Phonology.Consonants.Any(
-                x =>
-                    IpaComposer.AreEquivalent(
-                        x.Symbol,
-                        phoneme)))
-            {
+            if (project.Phonology.Consonants.Any(x => IpaComposer.AreEquivalent(x.Symbol, phoneme)))
                 return false;
-            }
-
-
-            IpaConsonant? baseConsonant =
-                IpaConsonants.All.FirstOrDefault(
-                    x =>
-                        IpaComposer.AreEquivalent(
-                            x.Symbol,
-                            pendingBaseSymbol));
-
-
-            if (baseConsonant == null)
+            var baseConsonant =
+                IpaConsonants.All.FirstOrDefault(x => IpaComposer.AreEquivalent(x.Symbol, pendingBaseSymbol));
+            if (baseConsonant == null) return false;
+            ConsonantPhoneme projectConsonant = new()
             {
-                return false;
-            }
-
-
-            ConsonantPhoneme projectConsonant =
-                new()
-                {
-                    Symbol =
-                        phoneme,
-
-                    BaseSymbol =
-                        baseConsonant.Symbol,
-
-                    Diacritics =
-                        new List<string>(
-                            pendingDiacritics),
-
-                    Place =
-                        baseConsonant.Place,
-
-                    Manner =
-                        baseConsonant.Manner,
-
-                    Voicing =
-                        baseConsonant.Voicing
-                };
-
-
-            project.Phonology.Consonants.Add(
-                projectConsonant);
-
-
-            consonantList.Items.Add(
-                new ConsonantEntry
-                {
-                    Symbol =
-                        projectConsonant.Symbol,
-
-                    Place =
-                        projectConsonant.Place,
-
-                    Manner =
-                        projectConsonant.Manner,
-
-                    Voicing =
-                        projectConsonant.Voicing
-                });
-
-
+                Symbol = phoneme,
+                BaseSymbol = baseConsonant.Symbol,
+                Diacritics = new List<string>(pendingDiacritics),
+                Place = baseConsonant.Place,
+                Manner = baseConsonant.Manner,
+                Voicing = baseConsonant.Voicing
+            };
+            project.Phonology.Consonants.Add(projectConsonant);
+            consonantList.Items.Add(new ConsonantEntry
+            {
+                Symbol = projectConsonant.Symbol,
+                Place = projectConsonant.Place,
+                Manner = projectConsonant.Manner,
+                Voicing = projectConsonant.Voicing
+            });
             RefreshConsonantChart();
-
             return true;
         }
 
-
         // 元音
-        if (project.Phonology.Vowels.Any(
-            x =>
-                IpaComposer.AreEquivalent(
-                    x.Symbol,
-                    phoneme)))
-        {
+        if (project.Phonology.Vowels.Any(x => IpaComposer.AreEquivalent(x.Symbol, phoneme)))
             return false;
-        }
-
-
-        IpaVowel? baseVowel =
-            IpaVowels.All.FirstOrDefault(
-                x =>
-                    IpaComposer.AreEquivalent(
-                        x.Symbol,
-                        pendingBaseSymbol));
-
-
-        if (baseVowel == null)
+        var baseVowel = IpaVowels.All.FirstOrDefault(x => IpaComposer.AreEquivalent(x.Symbol, pendingBaseSymbol));
+        if (baseVowel == null) return false;
+        VowelPhoneme projectVowel = new()
         {
-            return false;
-        }
-
-
-        VowelPhoneme projectVowel =
-            new()
-            {
-                Symbol =
-                    phoneme,
-
-                BaseSymbol =
-                    baseVowel.Symbol,
-
-                Diacritics =
-                    new List<string>(
-                        pendingDiacritics),
-
-                Height =
-                    baseVowel.Height,
-
-                Backness =
-                    baseVowel.Backness,
-
-                Roundedness =
-                    baseVowel.Roundedness
-            };
-
-
-        project.Phonology.Vowels.Add(
-            projectVowel);
-
-
-        vowelList.Items.Add(
-            new VowelEntry
-            {
-                Symbol =
-                    projectVowel.Symbol,
-
-                Height =
-                    projectVowel.Height,
-
-                Backness =
-                    projectVowel.Backness,
-
-                Roundedness =
-                    projectVowel.Roundedness
-            });
-
-
+            Symbol = phoneme,
+            BaseSymbol = baseVowel.Symbol,
+            Diacritics = new List<string>(pendingDiacritics),
+            Height = baseVowel.Height,
+            Backness = baseVowel.Backness,
+            Roundedness = baseVowel.Roundedness
+        };
+        project.Phonology.Vowels.Add(projectVowel);
+        vowelList.Items.Add(new VowelEntry
+        {
+            Symbol = projectVowel.Symbol,
+            Height = projectVowel.Height,
+            Backness = projectVowel.Backness,
+            Roundedness = projectVowel.Roundedness
+        });
         RefreshVowelChart();
-
         return true;
     }
     // 将当前音素加入项目。
     private void AddPhoneme(object? sender, EventArgs e)
     {
-        var phoneme =
-            NormalizeInputSymbol(
-                phonemeInput.Text);
-
-
-        if (phoneme.Length == 0)
-        {
-            return;
-        }
-
+        var phoneme = NormalizeInputSymbol(phonemeInput.Text);
+        if (phoneme.Length == 0) return;
 
         // Composer 创建的音素优先处理。
         // 例如 pʰ、ã、n̥。
         if (HasPendingComposition(phoneme))
         {
-            if (!AddPendingComposedPhoneme(
-                    phoneme))
-            {
+            if (!AddPendingComposedPhoneme(phoneme))
                 return;
-            }
-
-
             projectModified?.Invoke();
-
-
             ClearPendingComposition();
-
-
             phonemeInput.Clear();
-
             phonemeInput.Focus();
-
             return;
         }
 
