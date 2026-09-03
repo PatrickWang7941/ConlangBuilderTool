@@ -1,5 +1,7 @@
 ﻿namespace CBT.Data;
+
 public record IpaOtherSymbol(string Symbol, string Name);
+
 public static class IpaOtherSymbols
 {
     public static readonly List<IpaOtherSymbol> All =

@@ -1,19 +1,12 @@
-﻿//这一页用来实现元音功能
+﻿namespace CBT.Data;
 
-namespace CBT.Data;
-
-public record IpaVowel(
-    string Symbol,
-    string Height,
-    string Backness,
-    string Roundedness
-);
+public record IpaVowel(string Symbol, string Height, string Backness, string Roundedness);
 
 public static class IpaVowels
 {
     public static readonly List<IpaVowel> All =
     [
-        // 闭元音 Close
+        //闭元音Close
         new("i", "闭  Close", "前  Front", "不圆唇  Unrounded"),
         new("y", "闭  Close", "前  Front", "圆唇  Rounded"),
         new("ɨ", "闭  Close", "央  Central", "不圆唇  Unrounded"),
@@ -21,12 +14,12 @@ public static class IpaVowels
         new("ɯ", "闭  Close", "后  Back", "不圆唇  Unrounded"),
         new("u", "闭  Close", "后  Back", "圆唇  Rounded"),
 
-        // 近闭元音 Near-close
+        //近闭元音Near-close
         new("ɪ", "近闭  Near-close", "前  Front", "不圆唇  Unrounded"),
         new("ʏ", "近闭  Near-close", "前  Front", "圆唇  Rounded"),
         new("ʊ", "近闭  Near-close", "后  Back", "圆唇  Rounded"),
 
-        // 半闭元音 Close-mid
+        //半闭元音Close-mid
         new("e", "半闭  Close-mid", "前  Front", "不圆唇  Unrounded"),
         new("ø", "半闭  Close-mid", "前  Front", "圆唇  Rounded"),
         new("ɘ", "半闭  Close-mid", "央  Central", "不圆唇  Unrounded"),
@@ -34,10 +27,10 @@ public static class IpaVowels
         new("ɤ", "半闭  Close-mid", "后  Back", "不圆唇  Unrounded"),
         new("o", "半闭  Close-mid", "后  Back", "圆唇  Rounded"),
 
-        // 中元音 Mid
+        //中元音Mid
         new("ə", "中  Mid", "央  Central", "不圆唇  Unrounded"),
 
-        // 半开元音 Open-mid
+        //半开元音Open-mid
         new("ɛ", "半开  Open-mid", "前  Front", "不圆唇  Unrounded"),
         new("œ", "半开  Open-mid", "前  Front", "圆唇  Rounded"),
         new("ɜ", "半开  Open-mid", "央  Central", "不圆唇  Unrounded"),
@@ -45,11 +38,11 @@ public static class IpaVowels
         new("ʌ", "半开  Open-mid", "后  Back", "不圆唇  Unrounded"),
         new("ɔ", "半开  Open-mid", "后  Back", "圆唇  Rounded"),
 
-        // 近开元音 Near-open
+        //近开元音Near-open
         new("æ", "近开  Near-open", "前  Front", "不圆唇  Unrounded"),
         new("ɐ", "近开  Near-open", "央  Central", "不圆唇  Unrounded"),
 
-        // 开元音 Open
+        //开元音Open
         new("a", "开  Open", "前  Front", "不圆唇  Unrounded"),
         new("ɶ", "开  Open", "前  Front", "圆唇  Rounded"),
         new("ɑ", "开  Open", "后  Back", "不圆唇  Unrounded"),
