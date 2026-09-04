@@ -7,7 +7,9 @@ public class ConlangProject
 
     public string Name { get; set; } = "";
     public string Description { get; set; } = "";
+
     public PhonologyData Phonology { get; set; } = new();
+    public PhonotacticsData Phonotactics { get; set; } = new();
     public GrammarData Grammar { get; set; } = new();
     public LexiconData Lexicon { get; set; } = new();
 }

@@ -51,11 +51,13 @@ public partial class MainForm : Form
     {
         var overviewButton = CreateNavigationButton("概览  Overview");
         var phonologyButton = CreateNavigationButton("音系  Phonology");
+        var phonotacticsButton = CreateNavigationButton("音位配列  Phonotactics");
         var grammarButton = CreateNavigationButton("语法  Grammar");
         var lexiconButton = CreateNavigationButton("词汇  Lexicon");
 
         navigationPanel.Controls.Add(overviewButton);
         navigationPanel.Controls.Add(phonologyButton);
+        navigationPanel.Controls.Add(phonotacticsButton);
         navigationPanel.Controls.Add(grammarButton);
         navigationPanel.Controls.Add(lexiconButton);
 
@@ -65,8 +67,11 @@ public partial class MainForm : Form
         phonologyButton.Click += (sender, e) =>
             ShowControl(new PhonologyPage(currentProject, MarkProjectModified));
 
-        grammarButton.Click += (sender, e) => ShowPage("语法  Grammar");
-        lexiconButton.Click += (sender, e) => ShowPage("词汇  Lexicon");
+        phonotacticsButton.Click += (sender, e) =>
+            ShowControl(new PhonotacticsPage(currentProject, MarkProjectModified));
+
+        grammarButton.Click += (sender, e) => ShowEmptyPage();
+        lexiconButton.Click += (sender, e) => ShowEmptyPage();
 
         FormClosing += MainForm_FormClosing;
     }
@@ -100,18 +105,9 @@ public partial class MainForm : Form
         return !isModified;
     }
 
-    private void ShowPage(string pageName)
+    private void ShowEmptyPage()
     {
         workspacePanel.Controls.Clear();
-
-        Label pageTitle = new()
-        {
-            Text = pageName,
-            AutoSize = true,
-            Font = new Font("Microsoft YaHei UI", 18)
-        };
-
-        workspacePanel.Controls.Add(pageTitle);
     }
 
     private void ShowControl(Control page)
@@ -160,6 +156,7 @@ public partial class MainForm : Form
         Controls.Add(mainMenu);
 
         MainMenuStrip = mainMenu;
+
         Load += (sender, e) =>
         {
             mainSplitContainer.Panel1MinSize = 280;

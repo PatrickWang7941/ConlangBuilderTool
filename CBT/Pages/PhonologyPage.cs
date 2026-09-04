@@ -76,7 +76,7 @@ public class PhonologyPage : UserControl
         this.projectModified = projectModified;
 
         Dock = DockStyle.Fill;
-        Padding = new Padding(30, 0, 30, 30);
+        Padding = new Padding(0);
 
         FlowLayoutPanel contentPanel = new()
         {
@@ -443,6 +443,15 @@ public class PhonologyPage : UserControl
         {
             UpdateFeaturesFromSymbol();
             UpdateDiacriticButtonState();
+        };
+
+        //在音素输入框按Enter时直接执行添加。
+        phonemeInput.KeyDown += (sender, e) =>
+        {
+            if (e.KeyCode != Keys.Enter) return;
+
+            e.SuppressKeyPress = true;
+            AddPhoneme(sender, EventArgs.Empty);
         };
     }
 
@@ -1770,6 +1779,45 @@ public class PhonologyPage : UserControl
         return IpaComposer.NormalizeSymbol(symbol);
     }
 
+    private void SetPhonemeInput(string symbol)
+    {
+        var wasSynchronizing = isSynchronizingSelection;
+        isSynchronizingSelection = true;
+
+        phonemeInput.Text = symbol;
+        phonemeInput.SelectionStart = phonemeInput.Text.Length;
+
+        isSynchronizingSelection = wasSynchronizing;
+    }
+
+    //识别塞擦音和双重调音的快捷输入。
+    private bool TryApplyTiedConsonantInput(string input)
+    {
+        if (!IpaTieBarComposer.TryParse(input, out var tied) || tied == null)
+            return false;
+
+        SetPhonemeInput(tied.Symbol);
+
+        //Kiel表中已有的塞擦音继续使用标准参考属性。
+        var reference = IpaConsonants.All.FirstOrDefault(x =>
+            IpaComposer.AreEquivalent(x.Symbol, tied.Symbol));
+
+        if (reference != null)
+        {
+            ApplyConsonant(reference);
+            return true;
+        }
+
+        //自定义双重调音允许加入Inventory，但不强塞进错误的单一调音部位格子。
+        ClearIpaSelections();
+
+        noMatchingPhonemeLabel.Visible = false;
+        addPhonemeButton.Enabled = true;
+        diacriticButton.Enabled = false;
+
+        return true;
+    }
+
     private void UpdateSymbolFromFeatures()
     {
         if (isSynchronizingSelection || phonemeType.SelectedIndex != 0) return;
@@ -2027,6 +2075,7 @@ public class PhonologyPage : UserControl
     }
 
     //手动输入IPA后的反向识别
+    //手动输入IPA后的反向识别
     private void UpdateFeaturesFromSymbol()
     {
         if (isSynchronizingSelection) return;
@@ -2035,17 +2084,10 @@ public class PhonologyPage : UserControl
 
         //输入冒号时自动替换为长音符号，半角和全角冒号都接受
         if (phonemeType.SelectedIndex == 1 &&
-        (input.EndsWith(":") || input.EndsWith("：")))
+            (input.EndsWith(":") || input.EndsWith("：")))
         {
             input = input[..^1] + "ː";
-
-            var wasSynchronizing = isSynchronizingSelection;
-            isSynchronizingSelection = true;
-
-            phonemeInput.Text = input;
-            phonemeInput.SelectionStart = phonemeInput.Text.Length;
-
-            isSynchronizingSelection = wasSynchronizing;
+            SetPhonemeInput(input);
         }
 
         if (input.Length == 0)
@@ -2080,6 +2122,10 @@ public class PhonologyPage : UserControl
                 ApplyConsonant(consonant);
                 return;
             }
+
+            //dz、d-z、nm、n-m等输入在这里转成规范tie bar形式。
+            if (TryApplyTiedConsonantInput(input))
+                return;
 
             var nonPulmonic = FindNonPulmonicConsonantFromInput();
 
@@ -2119,7 +2165,6 @@ public class PhonologyPage : UserControl
             return;
         }
 
-        //普通基础元音
         var vowel = FindVowelFromInput();
 
         if (vowel == null)
@@ -2260,6 +2305,7 @@ public class PhonologyPage : UserControl
     }
 
     //将当前音素加入项目
+    //将当前音素加入项目
     private void AddPhoneme(object? sender, EventArgs e)
     {
         var phoneme = NormalizeInputSymbol(phonemeInput.Text);
@@ -2275,19 +2321,29 @@ public class PhonologyPage : UserControl
             ClearPendingComposition();
             phonemeInput.Clear();
             phonemeInput.Focus();
-
             return;
         }
 
         if (phonemeType.SelectedIndex == 0)
         {
-            phoneme = NormalizeInputSymbol(phoneme);
+            IpaTiedConsonant? tiedConsonant = null;
 
-            if (project.Phonology.Consonants.Any(x => x.Symbol == phoneme))
+            //输入框此时可能已经从x-y转换成x^y，因此同时识别内部规范形式。
+            if ((IpaTieBarComposer.TryParse(phoneme, out var parsedTied) ||
+                 IpaTieBarComposer.TryParseComposed(phoneme, out parsedTied)) &&
+                parsedTied != null)
+            {
+                tiedConsonant = parsedTied;
+                phoneme = tiedConsonant.Symbol;
+            }
+
+            if (project.Phonology.Consonants.Any(x =>
+                    IpaComposer.AreEquivalent(x.Symbol, phoneme)))
                 return;
 
-            //普通辅音
-            var ipaConsonant = IpaConsonants.All.FirstOrDefault(x => x.Symbol == phoneme);
+            //Kiel表中已有的普通辅音和塞擦音
+            var ipaConsonant = IpaConsonants.All.FirstOrDefault(x =>
+                IpaComposer.AreEquivalent(x.Symbol, phoneme));
 
             if (ipaConsonant != null)
             {
@@ -2295,6 +2351,7 @@ public class PhonologyPage : UserControl
                 {
                     Symbol = ipaConsonant.Symbol,
                     BaseSymbol = ipaConsonant.Symbol,
+                    Components = tiedConsonant?.Components.ToList() ?? new List<string>(),
                     Place = ipaConsonant.Place,
                     Manner = ipaConsonant.Manner,
                     Voicing = ipaConsonant.Voicing
@@ -2312,10 +2369,39 @@ public class PhonologyPage : UserControl
 
                 RefreshConsonantChart();
             }
+            else if (tiedConsonant != null)
+            {
+                //没有单独表格位置的双重调音仍然作为一个完整音素保存。
+                ConsonantPhoneme projectConsonant = new()
+                {
+                    Symbol = tiedConsonant.Symbol,
+                    BaseSymbol = tiedConsonant.Symbol,
+                    Components = tiedConsonant.Components.ToList(),
+                    Place = tiedConsonant.Place,
+                    Manner = tiedConsonant.Manner,
+                    Voicing = tiedConsonant.Voicing,
+                    Category = "复合调音  Tied articulation",
+                    Description = tiedConsonant.Description
+                };
+
+                project.Phonology.Consonants.Add(projectConsonant);
+
+                consonantList.Items.Add(new ConsonantEntry
+                {
+                    Symbol = projectConsonant.Symbol,
+                    Place = projectConsonant.Place,
+                    Manner = projectConsonant.Manner,
+                    Voicing = projectConsonant.Voicing,
+                    Category = projectConsonant.Category,
+                    Description = projectConsonant.Description
+                });
+
+                RefreshConsonantChart();
+            }
             else
             {
-                //Non-pulmonic
-                var nonPulmonic = IpaNonPulmonicConsonants.All.FirstOrDefault(x => x.Symbol == phoneme);
+                var nonPulmonic = IpaNonPulmonicConsonants.All.FirstOrDefault(x =>
+                    x.Symbol == phoneme);
 
                 if (nonPulmonic != null)
                 {
@@ -2339,8 +2425,8 @@ public class PhonologyPage : UserControl
                 }
                 else
                 {
-                    //Other IPA Symbols
-                    var otherSymbol = IpaOtherSymbols.All.FirstOrDefault(x => x.Symbol == phoneme);
+                    var otherSymbol = IpaOtherSymbols.All.FirstOrDefault(x =>
+                        x.Symbol == phoneme);
 
                     if (otherSymbol == null)
                     {
@@ -2415,7 +2501,16 @@ public class PhonologyPage : UserControl
     {
         if (consonantList.SelectedItem is ConsonantEntry consonant)
         {
-            project.Phonology.Consonants.RemoveAll(x => x.Symbol == consonant.Symbol);
+            if (!ConfirmReferencedPhonemeRemoval(consonant.Symbol))
+                return;
+
+            PhonotacticsReferenceService.RemoveReferences(
+                project.Phonotactics,
+                consonant.Symbol);
+
+            project.Phonology.Consonants.RemoveAll(x =>
+                IpaComposer.AreEquivalent(x.Symbol, consonant.Symbol));
+
             consonantList.Items.Remove(consonant);
 
             RefreshConsonantChart();
@@ -2428,12 +2523,62 @@ public class PhonologyPage : UserControl
 
         if (vowelList.SelectedItem is VowelEntry vowel)
         {
-            project.Phonology.Vowels.RemoveAll(x => x.Symbol == vowel.Symbol);
+            if (!ConfirmReferencedPhonemeRemoval(vowel.Symbol))
+                return;
+
+            PhonotacticsReferenceService.RemoveReferences(
+                project.Phonotactics,
+                vowel.Symbol);
+
+            project.Phonology.Vowels.RemoveAll(x =>
+                IpaComposer.AreEquivalent(x.Symbol, vowel.Symbol));
+
             vowelList.Items.Remove(vowel);
 
             RefreshVowelChart();
             projectModified?.Invoke();
         }
+    }
+
+    //删除音素前检查Phonotactics中的引用。
+    private bool ConfirmReferencedPhonemeRemoval(string phoneme)
+    {
+        var references = PhonotacticsReferenceService.FindReferences(
+            project.Phonotactics,
+            phoneme);
+
+        if (!references.HasReferences)
+            return true;
+
+        List<string> affected = new();
+
+        if (references.AllowedOnsets > 0)
+            affected.Add($"Allowed Onsets: {references.AllowedOnsets}");
+
+        if (references.AllowedNuclei > 0)
+            affected.Add($"Allowed Nuclei: {references.AllowedNuclei}");
+
+        if (references.AllowedCodas > 0)
+            affected.Add($"Allowed Codas: {references.AllowedCodas}");
+
+        if (references.ForbiddenSequences > 0)
+            affected.Add($"Forbidden Sequences: {references.ForbiddenSequences}");
+
+        var details = string.Join(Environment.NewLine, affected);
+
+        var result = MessageBox.Show(
+            this,
+            $"音素 {phoneme} 正在被音系配列规则使用。\n" +
+            $"删除该音素也会删除包含它的完整规则。\n\n" +
+            $"{details}\n\n" +
+            $"Phoneme {phoneme} is currently used by phonotactic rules.\n" +
+            $"Deleting it will also remove the complete rules containing it.\n\n" +
+            $"是否继续？\nContinue?",
+            "Conlang Builder Tool",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Warning);
+
+        return result == DialogResult.Yes;
     }
 
     private void RefreshConsonantChart()

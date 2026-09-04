@@ -15,14 +15,13 @@ public class OverviewPage : UserControl
         this.projectModified = projectModified;
 
         Dock = DockStyle.Fill;
-        Padding = new Padding(30);
+        Padding = new Padding(0);
 
         BuildLayout();
         LoadProjectData();
         ConnectEvents();
     }
 
-    //创建Overview页面。
     private void BuildLayout()
     {
         FlowLayoutPanel contentPanel = new()
@@ -30,15 +29,8 @@ public class OverviewPage : UserControl
             Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.TopDown,
             WrapContents = false,
-            AutoScroll = true
-        };
-
-        Label title = new()
-        {
-            Text = "概览  Overview",
-            AutoSize = true,
-            Font = new Font("Microsoft YaHei UI", 18),
-            Margin = new Padding(0, 0, 0, 30)
+            AutoScroll = true,
+            Padding = new Padding(0)
         };
 
         Label nameLabel = new()
@@ -68,7 +60,6 @@ public class OverviewPage : UserControl
         descriptionTextBox.Font = new Font("Microsoft YaHei UI", 11);
         descriptionTextBox.Margin = new Padding(0);
 
-        contentPanel.Controls.Add(title);
         contentPanel.Controls.Add(nameLabel);
         contentPanel.Controls.Add(nameTextBox);
         contentPanel.Controls.Add(descriptionLabel);
@@ -83,7 +74,6 @@ public class OverviewPage : UserControl
         descriptionTextBox.Text = project.Description;
     }
 
-    //项目内容改变时同步更新模型。
     private void ConnectEvents()
     {
         nameTextBox.TextChanged += (sender, e) =>
