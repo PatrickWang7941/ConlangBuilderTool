@@ -19,6 +19,9 @@ public class PhonotacticsPage : UserControl
     private readonly ListBox forbiddenList = new();
 
     private readonly Label validationLabel = new();
+    private readonly TextBox testWordTextBox = new();
+    private readonly Label tokenizationLabel = new();
+    private readonly Label testResultLabel = new();
 
     private readonly ConlangProject project;
     private readonly Action? projectModified;
@@ -139,7 +142,27 @@ public class PhonotacticsPage : UserControl
         validationLabel.AutoSize = true;
         validationLabel.MaximumSize = new Size(960, 0);
         validationLabel.Font = new Font("Microsoft YaHei UI", 10);
-        validationLabel.Margin = new Padding(0, 0, 0, 40);
+        validationLabel.Margin = new Padding(0, 0, 0, 30);
+
+        Label testTitle = new()
+        {
+            Text = "音系配列测试  Phonotactics Test",
+            AutoSize = true,
+            Font = new Font("Microsoft YaHei UI", 14),
+            Margin = new Padding(0, 10, 0, 8)
+        };
+
+        Label testHelp = new()
+        {
+            Text =
+                "输入IPA词形，按当前音系清单切分并检查禁止序列。\n" +
+                "This version checks Anywhere, Word-initial, and Word-final rules; syllable environments are not checked yet.",
+            AutoSize = true,
+            Font = new Font("Microsoft YaHei UI", 9),
+            Margin = new Padding(0, 0, 0, 12)
+        };
+
+        var testPanel = BuildTestPanel();
 
         contentPanel.Controls.Add(introduction);
         contentPanel.Controls.Add(templateTitle);
@@ -155,6 +178,9 @@ public class PhonotacticsPage : UserControl
         contentPanel.Controls.Add(forbiddenPanel);
         contentPanel.Controls.Add(validationTitle);
         contentPanel.Controls.Add(validationLabel);
+        contentPanel.Controls.Add(testTitle);
+        contentPanel.Controls.Add(testHelp);
+        contentPanel.Controls.Add(testPanel);
 
         Controls.Add(contentPanel);
 
@@ -335,6 +361,69 @@ public class PhonotacticsPage : UserControl
         return group;
     }
 
+    private Control BuildTestPanel()
+    {
+        TableLayoutPanel panel = new()
+        {
+            Width = 960,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            ColumnCount = 1,
+            RowCount = 3,
+            Margin = new Padding(0, 0, 0, 40)
+        };
+
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        panel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        panel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        panel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
+        FlowLayoutPanel inputRow = new()
+        {
+            AutoSize = true,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            Margin = new Padding(0, 0, 0, 10)
+        };
+
+        testWordTextBox.Width = 790;
+        testWordTextBox.Font = new Font("Microsoft YaHei UI", 12);
+        testWordTextBox.PlaceholderText = "IPA词形  IPA word form";
+        testWordTextBox.Margin = new Padding(0, 3, 12, 0);
+        testWordTextBox.KeyDown += TestWordTextBox_KeyDown;
+
+        Button testButton = new()
+        {
+            Text = "测试  Test",
+            Width = 150,
+            Height = testWordTextBox.PreferredHeight,
+            Font = new Font("Microsoft YaHei UI", 10),
+            Margin = new Padding(0, 3, 0, 0)
+        };
+        testButton.Click += RunPhonotacticsTest;
+
+        inputRow.Controls.Add(testWordTextBox);
+        inputRow.Controls.Add(testButton);
+
+        tokenizationLabel.Text = "解析  Tokenization:  —";
+        tokenizationLabel.AutoSize = true;
+        tokenizationLabel.MaximumSize = new Size(960, 0);
+        tokenizationLabel.Font = new Font("Microsoft YaHei UI", 10);
+        tokenizationLabel.Margin = new Padding(0, 0, 0, 10);
+
+        testResultLabel.Text = "结果  Result:  —";
+        testResultLabel.AutoSize = true;
+        testResultLabel.MaximumSize = new Size(960, 0);
+        testResultLabel.Font = new Font("Microsoft YaHei UI", 10);
+        testResultLabel.Margin = new Padding(0);
+
+        panel.Controls.Add(inputRow, 0, 0);
+        panel.Controls.Add(tokenizationLabel, 0, 1);
+        panel.Controls.Add(testResultLabel, 0, 2);
+
+        return panel;
+    }
+
     private Control BuildSequenceGroup(
         string title,
         ListBox list,
@@ -460,6 +549,74 @@ public class PhonotacticsPage : UserControl
         validationLabel.Text = result.CanValidate || string.IsNullOrWhiteSpace(result.Message)
             ? warningText
             : $"{result.Message}\n\n{warningText}";
+    }
+
+    private void RunPhonotacticsTest(object? sender, EventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(testWordTextBox.Text))
+        {
+            tokenizationLabel.Text = "解析  Tokenization:  —";
+            testResultLabel.Text = "请输入要测试的IPA词形。\nPlease enter an IPA word form to test.";
+            testWordTextBox.Focus();
+            return;
+        }
+
+        var tokenization = PhonemeTokenizerService.Tokenize(project, testWordTextBox.Text);
+        var tokenDisplay = tokenization.Tokens.Count == 0
+            ? "—"
+            : string.Join(" | ", tokenization.Tokens);
+
+        tokenizationLabel.Text = $"解析  Tokenization:  {tokenDisplay}";
+
+        if (!tokenization.Success)
+        {
+            testResultLabel.Text =
+                $"无法从规范化输入的第{tokenization.FailureIndex + 1}个字符继续解析。" +
+                $" Could not continue tokenizing at character {tokenization.FailureIndex + 1}.\n" +
+                $"未识别文本  Unrecognized text:  {tokenization.RemainingText}";
+            return;
+        }
+
+        var matches = PhonotacticsTestService.Test(project.Phonotactics, tokenization.Tokens);
+
+        if (matches.Count == 0)
+        {
+            testResultLabel.Text =
+                "✓ 未命中当前可检查的禁止序列。\n" +
+                "No currently testable forbidden sequence was found.";
+            return;
+        }
+
+        testResultLabel.Text =
+            "结果  Result:\n" +
+            string.Join("\n", matches.Select(FormatTestMatch));
+    }
+
+    private static string FormatTestMatch(PhonotacticsRuleMatch match)
+    {
+        var sequence = string.Concat(match.Rule.Phonemes);
+        var firstPosition = match.StartIndex + 1;
+        var lastPosition = match.StartIndex + match.Rule.Phonemes.Count;
+        var position = firstPosition == lastPosition
+            ? firstPosition.ToString()
+            : $"{firstPosition}–{lastPosition}";
+        var description = string.IsNullOrWhiteSpace(match.Rule.Description)
+            ? ""
+            : $" — {match.Rule.Description}";
+
+        return $"⚠ {sequence} — {GetTestEnvironmentDisplay(match.Environment)} — " +
+               $"音素位置 {position} / token position {position}{description}";
+    }
+
+    private static string GetTestEnvironmentDisplay(PhonemeSequenceEnvironment environment)
+    {
+        return environment switch
+        {
+            PhonemeSequenceEnvironment.Anywhere => "任意位置 / Anywhere",
+            PhonemeSequenceEnvironment.WordInitial => "词首 / Word-initial",
+            PhonemeSequenceEnvironment.WordFinal => "词尾 / Word-final",
+            _ => environment.ToString()
+        };
     }
 
     private void AddTemplate(object? sender, EventArgs e)
@@ -611,6 +768,14 @@ public class PhonotacticsPage : UserControl
 
         e.SuppressKeyPress = true;
         AddTemplate(sender, EventArgs.Empty);
+    }
+
+    private void TestWordTextBox_KeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.KeyCode != Keys.Enter) return;
+
+        e.SuppressKeyPress = true;
+        RunPhonotacticsTest(sender, EventArgs.Empty);
     }
 
     private sealed class SequenceListItem
