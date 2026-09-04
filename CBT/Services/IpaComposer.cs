@@ -21,6 +21,25 @@ public static class IpaComposer
         return builder.ToString().Normalize(NormalizationForm.FormC);
     }
 
+    //组合元音、Diacritics和长度标记。
+    public static string ComposeVowel(string baseSymbol, IEnumerable<string> diacritics, string lengthMark)
+    {
+        if (string.IsNullOrWhiteSpace(baseSymbol)) return "";
+
+        StringBuilder builder = new(baseSymbol.Trim());
+
+        foreach (string diacritic in diacritics)
+        {
+            if (string.IsNullOrEmpty(diacritic)) continue;
+            builder.Append(diacritic);
+        }
+
+        if (!string.IsNullOrEmpty(lengthMark))
+            builder.Append(lengthMark);
+
+        return builder.ToString().Normalize(NormalizationForm.FormC);
+    }
+
     //规范化用户输入或数据库中的IPA。
     public static string NormalizeSymbol(string symbol)
     {
