@@ -4,6 +4,8 @@ using CBT.Services;
 namespace CBT.Pages;
 public class PhonotacticsPage : UserControl
 {
+    private readonly ComboBox preferenceComboBox = new();
+    private bool loadingProjectData;
     private readonly Button addButton = new();
     private readonly ListBox codaList = new();
     private readonly TextBox descriptionTextBox = new();
@@ -143,6 +145,7 @@ public class PhonotacticsPage : UserControl
         contentPanel.Controls.Add(forbiddenTitle);
         contentPanel.Controls.Add(forbiddenHelp);
         contentPanel.Controls.Add(forbiddenPanel);
+        contentPanel.Controls.Add(BuildPreferencePanel());
         contentPanel.Controls.Add(validationTitle);
         contentPanel.Controls.Add(validationLabel);
         contentPanel.Controls.Add(testTitle);
@@ -269,6 +272,51 @@ public class PhonotacticsPage : UserControl
         group.Controls.Add(buttons);
         return group;
     }
+    private Control BuildPreferencePanel()
+    {
+        FlowLayoutPanel panel = new()
+        {
+            AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false,
+            Margin = new Padding(0, 0, 0, 30)
+        };
+        Label title = new()
+        {
+            Text = "音节划分偏好  Syllabification Preference", AutoSize = true,
+            Font = new Font("Microsoft YaHei UI", 14), Margin = new Padding(0, 10, 0, 8)
+        };
+        Label help = new()
+        {
+            Text = "当一个词存在多个合法音节划分时，用此设置调整候选显示顺序；不会改变哪些分析合法。\n" +
+                   "When multiple syllabifications are valid, this setting only changes their ranking.",
+            AutoSize = true, MaximumSize = new Size(960, 0),
+            Font = new Font("Microsoft YaHei UI", 9), Margin = new Padding(0, 0, 0, 12)
+        };
+        preferenceComboBox.DropDownStyle = ComboBoxStyle.DropDownList;
+        preferenceComboBox.Width = 420;
+        preferenceComboBox.Font = new Font("Microsoft YaHei UI", 10);
+        preferenceComboBox.Margin = new Padding(0);
+        preferenceComboBox.Items.AddRange(new object[]
+        {
+            "无偏好  No preference",
+            "偏向较大声首  Prefer larger onset",
+            "偏向较大韵尾  Prefer larger coda"
+        });
+        preferenceComboBox.SelectedIndexChanged += PreferenceChanged;
+        panel.Controls.Add(title);
+        panel.Controls.Add(help);
+        panel.Controls.Add(preferenceComboBox);
+        return panel;
+    }
+    private void PreferenceChanged(object? sender, EventArgs e)
+    {
+        if (loadingProjectData || preferenceComboBox.SelectedIndex < 0) return;
+        var preference = (SyllabificationPreference)preferenceComboBox.SelectedIndex;
+        if (project.Phonotactics.SyllabificationPreference == preference) return;
+        project.Phonotactics.SyllabificationPreference = preference;
+        projectModified?.Invoke();
+        if (!string.IsNullOrWhiteSpace(testWordTextBox.Text))
+            RunPhonotacticsTest(sender, EventArgs.Empty);
+    }
     private Control BuildTestPanel()
     {
         TableLayoutPanel panel = new()
@@ -366,6 +414,16 @@ public class PhonotacticsPage : UserControl
     }
     private void LoadProjectData()
     {
+        loadingProjectData = true;
+        try
+        {
+            var preference = project.Phonotactics.SyllabificationPreference;
+            preferenceComboBox.SelectedIndex = Enum.IsDefined(preference) ? (int)preference : 0;
+        }
+        finally
+        {
+            loadingProjectData = false;
+        }
         templateList.Items.Clear();
         foreach (var template in project.Phonotactics.SyllableTemplates)
             AddTemplateToList(template);

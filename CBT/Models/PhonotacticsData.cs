@@ -12,7 +12,18 @@ public class PhonotacticsData
 
     public List<PhonemeSequence> ForbiddenSequences { get; set; } = new();
 
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public SyllabificationPreference SyllabificationPreference { get; set; } = SyllabificationPreference.None;
+
     public string Notes { get; set; } = "";
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum SyllabificationPreference
+{
+    None,
+    PreferLargerOnset,
+    PreferLargerCoda
 }
 
 //音节模板，例如V、CV、CVC、(C)(C)V(C)。

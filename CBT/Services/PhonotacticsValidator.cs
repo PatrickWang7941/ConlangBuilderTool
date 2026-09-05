@@ -34,12 +34,18 @@ public static class PhonotacticsValidator
             return new(
                 false,
                 warnings,
-                "存在自定义模板，暂不进行槽位限制检查。Custom templates are present, so slot-limit checking is skipped.");
+                "存在自定义模板，暂不进行槽位限制检查。" +
+                " Custom templates are present, so slot-limit checking is skipped.");
         }
 
-        var maxOnsetSlots = analyses.Max(x => CountSlots(x.Onset, 'C'));
-        var maxNucleusSlots = analyses.Max(x => CountSlots(x.Nucleus, 'V'));
-        var maxCodaSlots = analyses.Max(x => CountSlots(x.Coda, 'C'));
+        var maxOnsetSlots = analyses.Max(x =>
+            CountSlots(x.Onset, 'C'));
+
+        var maxNucleusSlots = analyses.Max(x =>
+            CountSlots(x.Nucleus, 'V'));
+
+        var maxCodaSlots = analyses.Max(x =>
+            CountSlots(x.Coda, 'C'));
 
         CheckSequences(
             data.AllowedOnsets,
@@ -77,19 +83,55 @@ public static class PhonotacticsValidator
             switch (forbidden.Environment)
             {
                 case PhonemeSequenceEnvironment.Anywhere:
-                    CheckConflict(data.AllowedOnsets, forbidden, "声首", "Onset", warnings);
-                    CheckConflict(data.AllowedNuclei, forbidden, "音节核", "Nucleus", warnings);
-                    CheckConflict(data.AllowedCodas, forbidden, "韵尾", "Coda", warnings);
+                    CheckConflict(
+                        data.AllowedOnsets,
+                        forbidden,
+                        "声首",
+                        "Onset",
+                        warnings);
+
+                    CheckConflict(
+                        data.AllowedNuclei,
+                        forbidden,
+                        "音节核",
+                        "Nucleus",
+                        warnings);
+
+                    CheckConflict(
+                        data.AllowedCodas,
+                        forbidden,
+                        "韵尾",
+                        "Coda",
+                        warnings);
                     break;
+
                 case PhonemeSequenceEnvironment.Onset:
-                    CheckConflict(data.AllowedOnsets, forbidden, "声首", "Onset", warnings);
+                    CheckConflict(
+                        data.AllowedOnsets,
+                        forbidden,
+                        "声首",
+                        "Onset",
+                        warnings);
                     break;
+
                 case PhonemeSequenceEnvironment.Nucleus:
-                    CheckConflict(data.AllowedNuclei, forbidden, "音节核", "Nucleus", warnings);
+                    CheckConflict(
+                        data.AllowedNuclei,
+                        forbidden,
+                        "音节核",
+                        "Nucleus",
+                        warnings);
                     break;
+
                 case PhonemeSequenceEnvironment.Coda:
-                    CheckConflict(data.AllowedCodas, forbidden, "韵尾", "Coda", warnings);
+                    CheckConflict(
+                        data.AllowedCodas,
+                        forbidden,
+                        "韵尾",
+                        "Coda",
+                        warnings);
                     break;
+
                 //词首和词尾限制可以与一般Onset/Coda许可同时存在。
                 case PhonemeSequenceEnvironment.WordInitial:
                 case PhonemeSequenceEnvironment.WordFinal:
@@ -106,28 +148,62 @@ public static class PhonotacticsValidator
         List<string> warnings)
     {
         var conflict = allowed.Any(allowedSequence =>
-            allowedSequence.Phonemes.SequenceEqual(forbidden.Phonemes));
+            TokensEquivalent(
+                allowedSequence.Phonemes,
+                forbidden.Phonemes));
 
         if (!conflict) return;
 
         var display = string.Concat(forbidden.Phonemes);
-        var environment = GetEnvironmentDisplay(forbidden.Environment);
+        var environment =
+            GetEnvironmentDisplay(forbidden.Environment);
 
         warnings.Add(
             $"{display} 同时被定义为允许的{chineseName}和禁止规则（{environment}）。" +
             $" {display} is both an allowed {englishName} and a forbidden sequence ({environment}).");
     }
 
-    private static string GetEnvironmentDisplay(PhonemeSequenceEnvironment environment)
+    private static bool TokensEquivalent(
+        IReadOnlyList<string> first,
+        IReadOnlyList<string> second)
+    {
+        if (first.Count != second.Count)
+            return false;
+
+        for (var index = 0; index < first.Count; index++)
+        {
+            if (!IpaComposer.AreEquivalent(
+                    first[index],
+                    second[index]))
+                return false;
+        }
+
+        return true;
+    }
+
+    private static string GetEnvironmentDisplay(
+        PhonemeSequenceEnvironment environment)
     {
         return environment switch
         {
-            PhonemeSequenceEnvironment.Anywhere => "任意位置 / Anywhere",
-            PhonemeSequenceEnvironment.WordInitial => "词首 / Word-initial",
-            PhonemeSequenceEnvironment.WordFinal => "词尾 / Word-final",
-            PhonemeSequenceEnvironment.Onset => "声首 / Onset",
-            PhonemeSequenceEnvironment.Nucleus => "音节核 / Nucleus",
-            PhonemeSequenceEnvironment.Coda => "韵尾 / Coda",
+            PhonemeSequenceEnvironment.Anywhere =>
+                "任意位置 / Anywhere",
+
+            PhonemeSequenceEnvironment.WordInitial =>
+                "词首 / Word-initial",
+
+            PhonemeSequenceEnvironment.WordFinal =>
+                "词尾 / Word-final",
+
+            PhonemeSequenceEnvironment.Onset =>
+                "声首 / Onset",
+
+            PhonemeSequenceEnvironment.Nucleus =>
+                "音节核 / Nucleus",
+
+            PhonemeSequenceEnvironment.Coda =>
+                "韵尾 / Coda",
+
             _ => environment.ToString()
         };
     }
@@ -156,7 +232,9 @@ public static class PhonotacticsValidator
         }
     }
 
-    private static int CountSlots(string structure, char slot)
+    private static int CountSlots(
+        string structure,
+        char slot)
     {
         return structure.Count(x => x == slot);
     }

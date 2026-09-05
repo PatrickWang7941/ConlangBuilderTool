@@ -29,6 +29,7 @@ public sealed record SyllabificationResult(
 public static class SyllabificationService
 {
     private const int MaxAnalyses = 256;
+    private const int MaxFailureReasons = 6;
 
     public static SyllabificationResult Analyze(
         ConlangProject project,
@@ -42,7 +43,9 @@ public static class SyllabificationService
             return new(
                 false,
                 Array.Empty<SyllabificationAnalysis>(),
-                Message: "没有可进行音节划分的音素。No phonemes are available for syllabification.");
+                Message:
+                    "没有可进行音节划分的音素。" +
+                    " No phonemes are available for syllabification.");
         }
 
         if (project.Phonotactics.SyllableTemplates.Count == 0)
@@ -50,14 +53,16 @@ public static class SyllabificationService
             return new(
                 false,
                 Array.Empty<SyllabificationAnalysis>(),
-                Message: "尚未定义音节模板，无法自动进行音节划分。No syllable templates have been defined.");
+                Message:
+                    "尚未定义音节模板，无法自动进行音节划分。" +
+                    " No syllable templates have been defined.");
         }
 
         var templateAnalyses = project.Phonotactics.SyllableTemplates
             .Select(x => SyllableTemplateParser.Analyze(x.Pattern))
             .ToList();
 
-        //存在无法解释的模板时不猜测用户定义的结构。
+        //无法解释自定义模板时不替用户猜测结构。
         if (templateAnalyses.Any(x => !x.IsRecognized))
         {
             return new(
@@ -85,30 +90,61 @@ public static class SyllabificationService
         }
 
         var context = new SearchContext(project, phonemes, shapes);
-        var analyses = context.Search(0);
+        var rawAnalyses = context.Search(0);
+
+        //不同模板路径可能产生完全相同的音节结构，只向用户保留一个。
+        var analyses = DeduplicateAnalyses(rawAnalyses);
 
         if (analyses.Count == 0)
         {
-            var failureIndex = Math.Min(context.FarthestTokenIndex, phonemes.Count - 1);
-            var failedToken = failureIndex >= 0 && failureIndex < phonemes.Count
-                ? phonemes[failureIndex]
-                : "—";
+            var failureIndex = Math.Clamp(
+                context.FarthestFailureTokenIndex,
+                0,
+                phonemes.Count - 1);
+
+            var failedToken = phonemes[failureIndex];
+            var reasons = context.GetFailureReasons(failureIndex);
+
+            var message =
+                $"无法从第{failureIndex + 1}个音素（{failedToken}）继续找到合法音节划分。" +
+                $" No valid syllabification could continue from token {failureIndex + 1} ({failedToken}).";
+
+            if (reasons.Count > 0)
+            {
+                message +=
+                    "\n\n可能原因  Possible reasons:\n" +
+                    string.Join("\n", reasons.Select(x => $"• {x}"));
+            }
 
             return new(
                 false,
                 Array.Empty<SyllabificationAnalysis>(),
                 context.WasTruncated,
                 failureIndex,
-                $"无法从第{failureIndex + 1}个音素（{failedToken}）继续找到合法音节划分。" +
-                $" No valid syllabification could continue from token {failureIndex + 1} ({failedToken}).");
+                message);
         }
+
+        //偏好只排序已保留的合法候选，不参与搜索和剪枝；同分保持原顺序。
+        analyses = project.Phonotactics.SyllabificationPreference switch
+        {
+            SyllabificationPreference.PreferLargerOnset => analyses
+                .OrderByDescending(x => x.Sum(s => s.Onset.Count))
+                .ThenBy(x => x.Sum(s => s.Coda.Count)).ToList(),
+            SyllabificationPreference.PreferLargerCoda => analyses
+                .OrderByDescending(x => x.Sum(s => s.Coda.Count))
+                .ThenBy(x => x.Sum(s => s.Onset.Count)).ToList(),
+            _ => analyses
+        };
 
         return new(
             true,
-            analyses.Select(x => new SyllabificationAnalysis(x)).ToArray(),
+            analyses
+                .Select(x => new SyllabificationAnalysis(x))
+                .ToArray(),
             context.WasTruncated,
             Message: context.WasTruncated
-                ? $"合法分析数量过多，仅保留前{MaxAnalyses}个。Too many valid analyses were found; only the first {MaxAnalyses} are retained."
+                ? $"合法分析数量过多，仅保留前{MaxAnalyses}个。" +
+                  $" Too many valid analyses were found; only the first {MaxAnalyses} are retained."
                 : "");
     }
 
@@ -126,7 +162,9 @@ public static class SyllabificationService
     }
 
     //可选组整体出现或整体省略，例如(CC)产生0或2个槽位。
-    private static IReadOnlyList<int> GetPossibleSlotCounts(string structure, char slot)
+    private static IReadOnlyList<int> GetPossibleSlotCounts(
+        string structure,
+        char slot)
     {
         if (string.IsNullOrWhiteSpace(structure) || structure == "—")
             return [0];
@@ -137,7 +175,10 @@ public static class SyllabificationService
         {
             if (structure[index] == slot)
             {
-                counts = counts.Select(x => x + 1).ToHashSet();
+                counts = counts
+                    .Select(x => x + 1)
+                    .ToHashSet();
+
                 index++;
                 continue;
             }
@@ -151,7 +192,9 @@ public static class SyllabificationService
             var closing = structure.IndexOf(')', index + 1);
             if (closing < 0) break;
 
-            var optionalCount = structure[(index + 1)..closing].Count(x => x == slot);
+            var optionalCount = structure[(index + 1)..closing]
+                .Count(x => x == slot);
+
             var current = counts.ToArray();
 
             foreach (var count in current)
@@ -163,6 +206,45 @@ public static class SyllabificationService
         return counts.Order().ToArray();
     }
 
+    private static List<IReadOnlyList<SyllableAnalysis>> DeduplicateAnalyses(
+        IEnumerable<IReadOnlyList<SyllableAnalysis>> analyses)
+    {
+        List<IReadOnlyList<SyllableAnalysis>> unique = [];
+        HashSet<string> seen = new(StringComparer.Ordinal);
+
+        foreach (var analysis in analyses)
+        {
+            var key = CreateAnalysisKey(analysis);
+            if (!seen.Add(key)) continue;
+
+            unique.Add(analysis);
+        }
+
+        return unique;
+    }
+
+    private static string CreateAnalysisKey(
+        IReadOnlyList<SyllableAnalysis> analysis)
+    {
+        return string.Join(
+            "||",
+            analysis.Select(syllable =>
+                $"O:{CreateTokenKey(syllable.Onset)}|" +
+                $"N:{CreateTokenKey(syllable.Nucleus)}|" +
+                $"C:{CreateTokenKey(syllable.Coda)}"));
+    }
+
+    private static string CreateTokenKey(
+        IReadOnlyList<string> tokens)
+    {
+        //长度前缀避免多字符IPA和拼接边界产生相同key。
+        return string.Concat(tokens.Select(token =>
+        {
+            var normalized = IpaComposer.NormalizeSymbol(token);
+            return $"{normalized.Length}:{normalized};";
+        }));
+    }
+
     private sealed class SearchContext
     {
         private readonly ConlangProject project;
@@ -170,9 +252,10 @@ public static class SyllabificationService
         private readonly IReadOnlyList<SyllableShape> shapes;
 
         private readonly Dictionary<int, List<IReadOnlyList<SyllableAnalysis>>> memo = new();
+        private readonly Dictionary<int, HashSet<string>> failureReasons = new();
 
         public bool WasTruncated { get; private set; }
-        public int FarthestTokenIndex { get; private set; }
+        public int FarthestFailureTokenIndex { get; private set; }
 
         public SearchContext(
             ConlangProject project,
@@ -189,30 +272,43 @@ public static class SyllabificationService
             if (startIndex == phonemes.Count)
                 return [Array.Empty<SyllableAnalysis>()];
 
-            FarthestTokenIndex = Math.Max(FarthestTokenIndex, startIndex);
-
             if (memo.TryGetValue(startIndex, out var cached))
                 return cached;
 
-            List<IReadOnlyList<SyllableAnalysis>> results = new();
+            List<IReadOnlyList<SyllableAnalysis>> results = [];
+            HashSet<string> resultKeys = new(StringComparer.Ordinal);
 
             foreach (var shape in shapes)
             {
-                if (!TryCreateSyllable(startIndex, shape, out var syllable))
+                if (!TryCreateSyllable(
+                        startIndex,
+                        shape,
+                        out var syllable,
+                        out var failureReason))
+                {
+                    RecordFailure(startIndex, failureReason);
                     continue;
+                }
 
-                var nextIndex = startIndex +
+                var nextIndex =
+                    startIndex +
                     shape.OnsetCount +
                     shape.NucleusCount +
                     shape.CodaCount;
 
-                FarthestTokenIndex = Math.Max(FarthestTokenIndex, nextIndex);
-
                 foreach (var remainder in Search(nextIndex))
                 {
-                    results.Add(new[] { syllable }.Concat(remainder).ToArray());
+                    var candidate = new[] { syllable }
+                        .Concat(remainder)
+                        .ToArray();
 
-                    if (results.Count < MaxAnalyses) continue;
+                    var key = CreateAnalysisKey(candidate);
+                    if (!resultKeys.Add(key)) continue;
+
+                    results.Add(candidate);
+
+                    if (results.Count < MaxAnalyses)
+                        continue;
 
                     WasTruncated = true;
                     memo[startIndex] = results;
@@ -220,27 +316,56 @@ public static class SyllabificationService
                 }
             }
 
+            if (results.Count == 0)
+                FarthestFailureTokenIndex =
+                    Math.Max(FarthestFailureTokenIndex, startIndex);
+
             memo[startIndex] = results;
             return results;
+        }
+
+        public IReadOnlyList<string> GetFailureReasons(int tokenIndex)
+        {
+            if (!failureReasons.TryGetValue(tokenIndex, out var reasons))
+                return Array.Empty<string>();
+
+            return reasons
+                .Take(MaxFailureReasons)
+                .ToArray();
         }
 
         private bool TryCreateSyllable(
             int startIndex,
             SyllableShape shape,
-            out SyllableAnalysis syllable)
+            out SyllableAnalysis syllable,
+            out string failureReason)
         {
             syllable = new(
                 Array.Empty<string>(),
                 Array.Empty<string>(),
                 Array.Empty<string>());
 
+            failureReason = "";
+
             var totalCount =
                 shape.OnsetCount +
                 shape.NucleusCount +
                 shape.CodaCount;
 
-            if (totalCount == 0 || startIndex + totalCount > phonemes.Count)
+            if (totalCount == 0)
+            {
+                failureReason =
+                    "模板产生了空音节。The template produced an empty syllable.";
                 return false;
+            }
+
+            if (startIndex + totalCount > phonemes.Count)
+            {
+                failureReason =
+                    "剩余音素数量不足以匹配当前音节模板。" +
+                    " Too few phonemes remain to match the current syllable template.";
+                return false;
+            }
 
             var onset = Slice(startIndex, shape.OnsetCount);
 
@@ -251,30 +376,83 @@ public static class SyllabificationService
             var coda = Slice(codaStart, shape.CodaCount);
 
             if (!onset.All(IsConsonant))
+            {
+                failureReason =
+                    $"声首候选 {DisplaySequence(onset)} 包含非辅音音素。" +
+                    $" Onset candidate {DisplaySequence(onset)} contains a non-consonant phoneme.";
                 return false;
+            }
 
             if (!nucleus.All(IsNucleusPhoneme))
+            {
+                failureReason =
+                    $"音节核候选 {DisplaySequence(nucleus)} 不能作为当前音节核。" +
+                    $" Nucleus candidate {DisplaySequence(nucleus)} cannot serve as the current nucleus.";
                 return false;
+            }
 
             if (!coda.All(IsConsonant))
+            {
+                failureReason =
+                    $"韵尾候选 {DisplaySequence(coda)} 包含非辅音音素。" +
+                    $" Coda candidate {DisplaySequence(coda)} contains a non-consonant phoneme.";
                 return false;
+            }
 
-            if (!MatchesAllowed(onset, project.Phonotactics.AllowedOnsets))
+            if (!MatchesAllowed(
+                    onset,
+                    project.Phonotactics.AllowedOnsets))
+            {
+                failureReason =
+                    $"声首 {DisplaySequence(onset)} 不在当前Allowed Onsets中。" +
+                    $" Onset {DisplaySequence(onset)} is not listed in Allowed Onsets.";
                 return false;
+            }
 
-            if (!MatchesAllowed(nucleus, project.Phonotactics.AllowedNuclei))
+            if (!MatchesAllowed(
+                    nucleus,
+                    project.Phonotactics.AllowedNuclei))
+            {
+                failureReason =
+                    $"音节核 {DisplaySequence(nucleus)} 不在当前Allowed Nuclei中。" +
+                    $" Nucleus {DisplaySequence(nucleus)} is not listed in Allowed Nuclei.";
                 return false;
+            }
 
-            if (!MatchesAllowed(coda, project.Phonotactics.AllowedCodas))
+            if (!MatchesAllowed(
+                    coda,
+                    project.Phonotactics.AllowedCodas))
+            {
+                failureReason =
+                    $"韵尾 {DisplaySequence(coda)} 不在当前Allowed Codas中。" +
+                    $" Coda {DisplaySequence(coda)} is not listed in Allowed Codas.";
                 return false;
+            }
 
             syllable = new(onset, nucleus, coda);
             return true;
         }
 
-        private IReadOnlyList<string> Slice(int startIndex, int count)
+        private void RecordFailure(int tokenIndex, string reason)
         {
-            if (count == 0) return Array.Empty<string>();
+            if (string.IsNullOrWhiteSpace(reason)) return;
+
+            if (!failureReasons.TryGetValue(tokenIndex, out var reasons))
+            {
+                reasons = new HashSet<string>(StringComparer.Ordinal);
+                failureReasons[tokenIndex] = reasons;
+            }
+
+            if (reasons.Count < MaxFailureReasons)
+                reasons.Add(reason);
+        }
+
+        private IReadOnlyList<string> Slice(
+            int startIndex,
+            int count)
+        {
+            if (count == 0)
+                return Array.Empty<string>();
 
             return phonemes
                 .Skip(startIndex)
@@ -285,31 +463,45 @@ public static class SyllabificationService
         private bool IsConsonant(string phoneme)
         {
             return project.Phonology.Consonants.Any(x =>
-                IpaComposer.AreEquivalent(x.Symbol, phoneme));
+                IpaComposer.AreEquivalent(
+                    x.Symbol,
+                    phoneme));
         }
 
         private bool IsNucleusPhoneme(string phoneme)
         {
             if (project.Phonology.Vowels.Any(x =>
-                    IpaComposer.AreEquivalent(x.Symbol, phoneme)))
+                    IpaComposer.AreEquivalent(
+                        x.Symbol,
+                        phoneme)))
                 return true;
 
             //带Syllabic标记的辅音也可以充当nucleus。
             return project.Phonology.Consonants.Any(x =>
                 IpaComposer.AreEquivalent(x.Symbol, phoneme) &&
-                x.Diacritics.Contains("\u0329"));
+                x.Diacritics?.Contains("\u0329") == true);
         }
 
         private static bool MatchesAllowed(
             IReadOnlyList<string> candidate,
             IReadOnlyList<PhonemeSequence> allowed)
         {
-            //空列表表示尚未定义限制；空onset/coda由模板本身决定是否合法。
+            //空列表表示未定义具体限制；空onset/coda由模板决定是否合法。
             if (candidate.Count == 0 || allowed.Count == 0)
                 return true;
 
             return allowed.Any(sequence =>
-                TokensEquivalent(candidate, sequence.Phonemes));
+                TokensEquivalent(
+                    candidate,
+                    sequence.Phonemes));
+        }
+
+        private static string DisplaySequence(
+            IReadOnlyList<string> phonemes)
+        {
+            return phonemes.Count == 0
+                ? "—"
+                : string.Concat(phonemes);
         }
     }
 
@@ -317,11 +509,14 @@ public static class SyllabificationService
         IReadOnlyList<string> first,
         IReadOnlyList<string> second)
     {
-        if (first.Count != second.Count) return false;
+        if (first.Count != second.Count)
+            return false;
 
-        for (var i = 0; i < first.Count; i++)
+        for (var index = 0; index < first.Count; index++)
         {
-            if (!IpaComposer.AreEquivalent(first[i], second[i]))
+            if (!IpaComposer.AreEquivalent(
+                    first[index],
+                    second[index]))
                 return false;
         }
 
