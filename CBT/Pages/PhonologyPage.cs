@@ -78,19 +78,28 @@ public class PhonologyPage : UserControl
         Dock = DockStyle.Fill;
         Padding = new Padding(0);
 
-        FlowLayoutPanel contentPanel = new()
+        //构建期间暂停布局，避免中间态被绘制出来。
+        SuspendLayout();
+        try
         {
-            Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.TopDown,
-            WrapContents = false,
-            AutoScroll = true,
-            Padding = new Padding(0)
-        };
+            FlowLayoutPanel contentPanel = new()
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoScroll = true,
+                Padding = new Padding(0)
+            };
 
-        contentPanel.Controls.Add(BuildPhonemeInventory());
-        Controls.Add(contentPanel);
+            contentPanel.Controls.Add(BuildPhonemeInventory());
+            Controls.Add(contentPanel);
 
-        LoadProjectPhonology();
+            LoadProjectPhonology();
+        }
+        finally
+        {
+            ResumeLayout(true);
+        }
     }
 
     //创建整个Phonology页面
@@ -1445,6 +1454,20 @@ public class PhonologyPage : UserControl
 
     //根据音素类型和选择模式更新UI
     private void UpdateSelectionMode()
+    {
+        //批量切换Visible会引发多次重排，暂停布局直到全部设置完成。
+        SuspendLayout();
+        try
+        {
+            UpdateSelectionModeCore();
+        }
+        finally
+        {
+            ResumeLayout(true);
+        }
+    }
+
+    private void UpdateSelectionModeCore()
     {
         var isConsonant = phonemeType.SelectedIndex == 0;
         var isVowel = phonemeType.SelectedIndex == 1;

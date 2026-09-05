@@ -17,9 +17,18 @@ public class OverviewPage : UserControl
         Dock = DockStyle.Fill;
         Padding = new Padding(0);
 
-        BuildLayout();
-        LoadProjectData();
-        ConnectEvents();
+        //构建期间暂停布局，避免首次显示时出现中间态闪烁。
+        SuspendLayout();
+        try
+        {
+            BuildLayout();
+            LoadProjectData();
+            ConnectEvents();
+        }
+        finally
+        {
+            ResumeLayout(true);
+        }
     }
 
     private void BuildLayout()

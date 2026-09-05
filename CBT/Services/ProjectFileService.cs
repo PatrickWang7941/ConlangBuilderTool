@@ -28,6 +28,7 @@ public static class ProjectFileService
         //兼容可能缺少部分数据的旧项目。
         project.Phonology ??= new PhonologyData();
         project.Phonotactics ??= new PhonotacticsData();
+        project.Orthography ??= new OrthographyData();
         project.Grammar ??= new GrammarData();
         project.Lexicon ??= new LexiconData();
 

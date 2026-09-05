@@ -7,7 +7,8 @@ public enum PhonemeSequenceKind
     Onset,
     Nucleus,
     Coda,
-    Forbidden
+    Forbidden,
+    Orthography
 }
 
 public class PhonemeSequenceDialog : Form
@@ -232,9 +233,10 @@ public class PhonemeSequenceDialog : Form
             return;
         }
 
-        if (kind == PhonemeSequenceKind.Forbidden)
+        if (kind == PhonemeSequenceKind.Forbidden ||
+            kind == PhonemeSequenceKind.Orthography)
         {
-            //禁止序列允许跨越辅音和元音类别。
+            //禁止序列和拼写映射都允许跨越辅音和元音类别。
             foreach (var consonant in project.Phonology.Consonants)
                 inventoryList.Items.Add(new PhonemeItem(consonant.Symbol, DescribeConsonant(consonant)));
 
@@ -340,7 +342,7 @@ public class PhonemeSequenceDialog : Form
             MessageBox.Show(
                 this,
                 "请至少选择一个音素。\n\nPlease select at least one phoneme.",
-                "Phonotactics",
+                Text,
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
 
@@ -359,6 +361,7 @@ public class PhonemeSequenceDialog : Form
             PhonemeSequenceKind.Nucleus => "添加音节核序列  Add Nucleus Sequence",
             PhonemeSequenceKind.Coda => "添加韵尾序列  Add Coda Sequence",
             PhonemeSequenceKind.Forbidden => "添加禁止序列  Add Forbidden Sequence",
+            PhonemeSequenceKind.Orthography => "添加拼写映射序列  Add Orthography Sequence",
             _ => "Phoneme Sequence"
         };
     }

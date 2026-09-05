@@ -10,6 +10,7 @@ public class ConlangProject
 
     public PhonologyData Phonology { get; set; } = new();
     public PhonotacticsData Phonotactics { get; set; } = new();
+    public OrthographyData Orthography { get; set; } = new();
     public GrammarData Grammar { get; set; } = new();
     public LexiconData Lexicon { get; set; } = new();
 }

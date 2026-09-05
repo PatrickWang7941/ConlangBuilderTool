@@ -32,10 +32,20 @@ public class PhonotacticsPage : UserControl
         this.projectModified = projectModified;
         Dock = DockStyle.Fill;
         Padding = new Padding(0);
-        BuildLayout();
-        LoadProjectData();
-        UpdatePreview();
-        UpdateValidation();
+
+        //构建期间暂停布局，避免首次显示时出现中间态闪烁。
+        SuspendLayout();
+        try
+        {
+            BuildLayout();
+            LoadProjectData();
+            UpdatePreview();
+            UpdateValidation();
+        }
+        finally
+        {
+            ResumeLayout(true);
+        }
     }
     private void BuildLayout()
     {
@@ -507,8 +517,11 @@ public class PhonotacticsPage : UserControl
         {
             var analysis = result.Analyses[0];
             syllabificationLabel.Text = "音节划分  Syllabification:\n" + FormatSyllabificationAnalysis(analysis);
-            if (result.WasTruncated && !string.IsNullOrWhiteSpace(result.Message))
-                syllabificationLabel.Text += $"\n\n{result.Message}";
+            //截断时即使只保留了一个候选，也不能宣称它是唯一合法分析。
+            if (result.WasTruncated)
+                syllabificationLabel.Text +=
+                    "\n\n⚠ 音节搜索达到上限，可能还存在其他未显示的合法分析。" +
+                    " The syllabification search reached its limit; other valid analyses may exist.";
             return;
         }
         const int displayLimit = 8;
@@ -551,14 +564,12 @@ public class PhonotacticsPage : UserControl
             var description = string.IsNullOrWhiteSpace(assessment.Rule.Description)
                 ? ""
                 : $" — {assessment.Rule.Description}";
-            if (assessment.IsCertain)
-                warnings.Add($"⚠ {sequence} — {environment} — " + $"所有合法音节划分都会命中此规则。" +
-                             $" All valid syllabifications violate this rule." +
-                             $" Syllable(s): {syllables}{description}");
-            else
-                warnings.Add($"△ {sequence} — {environment} — " + $"仅部分合法音节划分命中此规则。" +
-                             $" Only some valid syllabifications violate this rule." +
-                             $" Syllable(s): {syllables}{description}");
+            warnings.Add(FormatAssessment(
+                assessment,
+                sequence,
+                environment,
+                syllables,
+                description));
         }
         if (!result.Syllabification.Success)
         {
@@ -571,7 +582,10 @@ public class PhonotacticsPage : UserControl
             return;
         }
         testResultLabel.Text = warnings.Count == 0
-            ? "✓ 未发现当前规则下的音系配列冲突。\n" + "No phonotactic conflict was found under the current rules."
+            ? (result.Syllabification.WasTruncated
+                ? "△ 未发现词级禁止序列，但音节搜索未穷尽，无法确认所有合法音节划分均无冲突。\n" +
+                  "No word-level forbidden sequence was found, but the syllabification search was truncated, so a clean syllable-level result cannot be confirmed."
+                : "✓ 未发现当前规则下的音系配列冲突。\n" + "No phonotactic conflict was found under the current rules.")
             : "结果  Result:\n" + string.Join("\n", warnings);
     }
     private static string FormatTestMatch(PhonotacticsRuleMatch match)
@@ -583,6 +597,44 @@ public class PhonotacticsPage : UserControl
         var description = string.IsNullOrWhiteSpace(match.Rule.Description) ? "" : $" — {match.Rule.Description}";
         return $"⚠ {sequence} — {GetTestEnvironmentDisplay(match.Environment)} — " +
                $"音素位置 {position} / token position {position}{description}";
+    }
+
+    //音节搜索未穷尽时，结论不能宣称覆盖所有合法候选。
+    private static string FormatAssessment(
+        SyllableRuleAssessment assessment,
+        string sequence,
+        string environment,
+        string syllables,
+        string description)
+    {
+        return assessment.Conclusion switch
+        {
+            SyllableAssessmentConclusion.Certain =>
+                $"⚠ {sequence} — {environment} — " +
+                "所有合法音节划分都会命中此规则。" +
+                " All valid syllabifications violate this rule." +
+                $" Syllable(s): {syllables}{description}",
+
+            SyllableAssessmentConclusion.Partial =>
+                $"△ {sequence} — {environment} — " +
+                "仅部分合法音节划分命中此规则。" +
+                " Only some valid syllabifications violate this rule." +
+                $" Syllable(s): {syllables}{description}",
+
+            SyllableAssessmentConclusion.IncompleteAllHit =>
+                $"⚠ {sequence} — {environment} — " +
+                "已检查的合法音节划分均命中此规则，但音节搜索未穷尽，无法确认所有候选。" +
+                " All checked syllabifications violate this rule, but the search was truncated." +
+                $" Syllable(s): {syllables}{description}",
+
+            SyllableAssessmentConclusion.IncompletePartial =>
+                $"△ {sequence} — {environment} — " +
+                "已检查的合法音节划分中存在差异，但音节搜索未穷尽，其余候选未知。" +
+                " Some checked syllabifications violate this rule, but the search was truncated." +
+                $" Syllable(s): {syllables}{description}",
+
+            _ => throw new ArgumentOutOfRangeException(nameof(assessment))
+        };
     }
     private static string GetTestEnvironmentDisplay(PhonemeSequenceEnvironment environment)
     {

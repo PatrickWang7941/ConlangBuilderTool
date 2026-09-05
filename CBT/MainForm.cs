@@ -9,7 +9,7 @@ public partial class MainForm : Form
     private readonly MenuStrip mainMenu = new();
     private readonly SplitContainer mainSplitContainer = new();
     private readonly FlowLayoutPanel navigationPanel = new();
-    private readonly Panel workspacePanel = new();
+    private readonly BufferedPanel workspacePanel = new();
 
     private string? currentFilePath;
     private ConlangProject currentProject = new();
@@ -29,6 +29,9 @@ public partial class MainForm : Form
         BuildFileMenu();
         BuildNavigation();
         ShowControl(new OverviewPage(currentProject, MarkProjectModified));
+
+        //对主窗口整棵树开启双缓冲，避免工作区背景擦除造成的闪烁。
+        EnableDoubleBuffering(this);
     }
 
     private void MarkProjectModified()
@@ -52,12 +55,14 @@ public partial class MainForm : Form
         var overviewButton = CreateNavigationButton("概览  Overview");
         var phonologyButton = CreateNavigationButton("音系  Phonology");
         var phonotacticsButton = CreateNavigationButton("音位配列  Phonotactics");
+        var orthographyButton = CreateNavigationButton("拼写  Orthography");
         var grammarButton = CreateNavigationButton("语法  Grammar");
         var lexiconButton = CreateNavigationButton("词汇  Lexicon");
 
         navigationPanel.Controls.Add(overviewButton);
         navigationPanel.Controls.Add(phonologyButton);
         navigationPanel.Controls.Add(phonotacticsButton);
+        navigationPanel.Controls.Add(orthographyButton);
         navigationPanel.Controls.Add(grammarButton);
         navigationPanel.Controls.Add(lexiconButton);
 
@@ -70,8 +75,14 @@ public partial class MainForm : Form
         phonotacticsButton.Click += (sender, e) =>
             ShowControl(new PhonotacticsPage(currentProject, MarkProjectModified));
 
-        grammarButton.Click += (sender, e) => ShowEmptyPage();
-        lexiconButton.Click += (sender, e) => ShowEmptyPage();
+        orthographyButton.Click += (sender, e) =>
+            ShowControl(new OrthographyPage(currentProject, MarkProjectModified));
+
+        grammarButton.Click += (sender, e) =>
+            ShowControl(new GrammarPage(currentProject, MarkProjectModified));
+
+        lexiconButton.Click += (sender, e) =>
+            ShowControl(new LexiconPage(currentProject, MarkProjectModified));
 
         FormClosing += MainForm_FormClosing;
     }
@@ -112,9 +123,36 @@ public partial class MainForm : Form
 
     private void ShowControl(Control page)
     {
-        workspacePanel.Controls.Clear();
-        page.Dock = DockStyle.Fill;
-        workspacePanel.Controls.Add(page);
+        //暂停布局避免切换页面时清空和添加控件造成的闪烁。
+        workspacePanel.SuspendLayout();
+        try
+        {
+            workspacePanel.Controls.Clear();
+            page.Dock = DockStyle.Fill;
+            workspacePanel.Controls.Add(page);
+        }
+        finally
+        {
+            workspacePanel.ResumeLayout(true);
+        }
+
+        //新页面动态添加，需要单独开启双缓冲。
+        EnableDoubleBuffering(page);
+    }
+
+    //递归开启双缓冲。DoubleBuffered是受保护的属性，通过反射设置。
+    private static void EnableDoubleBuffering(Control control)
+    {
+        var property = control.GetType().GetProperty(
+            "DoubleBuffered",
+            System.Reflection.BindingFlags.Instance |
+            System.Reflection.BindingFlags.NonPublic);
+
+        if (property?.CanWrite == true)
+            property.SetValue(control, true, null);
+
+        foreach (Control child in control.Controls)
+            EnableDoubleBuffering(child);
     }
 
     private Button CreateNavigationButton(string text)

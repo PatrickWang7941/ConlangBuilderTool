@@ -15,8 +15,21 @@ public sealed record SyllableRuleMatch(
 public sealed record SyllableRuleAssessment(
     PhonemeSequence Rule,
     PhonemeSequenceEnvironment Environment,
-    bool IsCertain,
+    SyllableAssessmentConclusion Conclusion,
     IReadOnlyList<int> SyllableNumbers);
+
+//音节级规则的结论；搜索被截断时不能宣称已经穷尽所有候选。
+public enum SyllableAssessmentConclusion
+{
+    //搜索完整且所有候选都命中该规则。
+    Certain,
+    //搜索完整但仅部分候选命中该规则。
+    Partial,
+    //搜索未穷尽，已保留候选全部命中，完整结论未确定。
+    IncompleteAllHit,
+    //搜索未穷尽，已保留候选中存在差异，其余候选未知。
+    IncompletePartial
+}
 
 public sealed record PhonotacticsTestResult(
     IReadOnlyList<PhonotacticsRuleMatch> WordMatches,
@@ -56,7 +69,8 @@ public static class PhonotacticsTestService
 
         var assessments = BuildAssessments(
             project.Phonotactics,
-            matchesByAnalysis);
+            matchesByAnalysis,
+            syllabification.WasTruncated);
 
         return new(
             wordMatches,
@@ -146,7 +160,8 @@ public static class PhonotacticsTestService
 
     private static IReadOnlyList<SyllableRuleAssessment> BuildAssessments(
         PhonotacticsData data,
-        IReadOnlyList<IReadOnlyList<SyllableRuleMatch>> matchesByAnalysis)
+        IReadOnlyList<IReadOnlyList<SyllableRuleMatch>> matchesByAnalysis,
+        bool searchWasTruncated)
     {
         if (matchesByAnalysis.Count == 0)
             return Array.Empty<SyllableRuleAssessment>();
@@ -178,10 +193,19 @@ public static class PhonotacticsTestService
                 .Order()
                 .ToArray();
 
+            var allHit = matchingAnalyses.Count == matchesByAnalysis.Count;
+            var conclusion = searchWasTruncated
+                ? (allHit
+                    ? SyllableAssessmentConclusion.IncompleteAllHit
+                    : SyllableAssessmentConclusion.IncompletePartial)
+                : (allHit
+                    ? SyllableAssessmentConclusion.Certain
+                    : SyllableAssessmentConclusion.Partial);
+
             assessments.Add(new(
                 rule,
                 rule.Environment,
-                matchingAnalyses.Count == matchesByAnalysis.Count,
+                conclusion,
                 syllableNumbers));
         }
 
